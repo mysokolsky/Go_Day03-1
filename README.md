@@ -1,4 +1,4 @@
-# Day 03 - Go Boot camp
+# Day 03 — Go Boot camp
 
 ## Tasty Discoveries
 
@@ -27,35 +27,35 @@
 <h2 id="chapter-i" >Chapter I</h2>
 <h2 id="general-rules" >General rules</h2>
 
-- Your programs should not quit unexpectedly (giving an error on a valid input). If this happens, your project will be considered non functional and will receive a 0 during the evaluation.
-- We encourage you to create test programs for your project even though this work won't have to be submitted and won't be graded. It will give you a chance to easily test your work and your peers' work. You will find those tests especially useful during your defence. Indeed, during defence, you are free to use your tests and/or the tests of the peer you are evaluating.
-- Submit your work to your assigned git repository. Only the work in the git repository will be graded.
-- If your code is using external dependencies, it should use [Go Modules](https://go.dev/blog/using-go-modules) for managing them
+- Your programs should not exit unexpectedly (give an error on valid input). If this happens, your project will be considered non-functional and will receive a 0 in the evaluation.
+- We encourage you to create test programs for your project, even though this work doesn't have to be submitted and won't be graded. This will allow you to easily test your work and the work of your peers. You will find these tests particularly useful during your defense. In fact, you are free to use your tests and/or the tests of the peer you are evaluating during your defense.
+- Submit your work to your assigned git repository. Only the work in the git repository will be evaluated.
+- If your code uses external dependencies, it should use [Go Modules](https://go.dev/blog/using-go-modules) to manage them.
 
 <h2 id="chapter-ii" >Chapter II</h2>
 <h2 id="rules-of-the-day" >Rules of the day</h2>
 
-- You should only turn in `*.go` files and (in case of external dependencies) `go.mod` + `go.sum`
-- Your code for this task should be buildable with just `go build`
-- All inputs ('page'/'lat'/'long') should be thouroughly validated and never cause HTTP 500 (only HTTP 400/401 is acceptable, with a meaningful error message, as explained in EX02)
+- You should only submit `*.go` files and (in case of external dependencies) `go.mod` + `go.sum`.
+- Your code for this task should be buildable with just `go build`.
+- All input ('page'/'lat'/'long') should be thoroughly validated and never cause an HTTP 500 (only HTTP 400/401 is acceptable, with a meaningful error message, as explained in EX02).
 
 <h2 id="chapter-iii" >Chapter III</h2>
 <h2 id="intro" >Intro</h2>
 
-People tend to love some recommending apps. It helps to avoid thinking too much about what to buy, where to go and what to eat.
+People tend to love some recommendation apps. It helps to avoid thinking too much about what to buy, where to go, and what to eat.
 
-Also, pretty much everyone has a phone with a geolocation. How often did you try finding some restaurants in your area for dinner?
+Plus, pretty much everyone has a phone with geolocation. How many times have you tried to find some restaurants in your area for dinner?
 
-Let's think a bit about how these services work and build one of our own, really simple one, shall we?
+Let's think about how these services work and build one of our own, a really simple one, right?
 
 <h2 id="chapter-iv" >Chapter IV</h2>
 <h3 id="ex00">Exercise 00: Loading Data</h3>
 
-There are lots and lots of various databases on the market. But, because we're trying to provide the ability to search for things, let's use [Elasticsearch](https://www.elastic.co/downloads/elasticsearch). <!---All examples provided have been tested on version 7.9.2.-->
+There are many, many different databases on the market. But since we're trying to provide the ability to search for things, let's use [Elasticsearch](https://www.elastic.co/downloads/elasticsearch). <!---All examples provided have been tested on version 7.9.2.-->
 
-Elasticsearch is a full text search engine built on top of [Lucene](https://en.wikipedia.org/wiki/Apache_Lucene). It provides an HTTP API that we will be using in this task.
+Elasticsearch is a full-text search engine built on top of [Lucene](https://en.wikipedia.org/wiki/Apache_Lucene). It provides an HTTP API, which we will use in this task.
 
-Our provided dataset of restaurants (taken from an Open Data portal) consists of more than 13 thousands of restaurants in the area of Moscow, Russia (you can put together another similar dataset for any other location you want). Every entry has:
+Our provided dataset of restaurants (taken from an Open Data portal) consists of more than 13 thousand restaurants in the area of Moscow, Russia (you can build another similar dataset for any other location you want). Each entry has:
 
 - ID
 - Name
@@ -64,21 +64,21 @@ Our provided dataset of restaurants (taken from an Open Data portal) consists of
 - Longitude
 - Latitude
 
-Before uploading all entries into the database, let's create an index and a mapping (explicitly specifying data types). Without it Elasticsearch will try to guess field types based on documents provided, and sometimes it won't recognize geopoints.
+Before uploading all entries into the database, let's create an index and a mapping (explicitly specifying data types). Without them, Elasticsearch will try to guess field types based on the documents provided, and sometimes it won't recognize geopoints.
 
-Here are a couple links to help you get started on things:
+Here are a few links to help you get started:
 - https://www.elastic.co/guide/en/elasticsearch/reference/8.4/indices-create-index.html
 - https://www.elastic.co/guide/en/elasticsearch/reference/8.4/geo-point.html
 
-Start the database by running `~$ /path/to/elasticsearch/dir/bin/elasticsearch` and let's experiment around.
+Start the database by running `~$ /path/to/elasticsearch/dir/bin/elasticsearch` and let's experiment.
 
-For simplicity, let's use "places" as a name for an index and "place" as a name for an entry. You can create an index using cURL like this:
+For simplicity, let's use "places" as the name for an index and "place" as the name for an entry. You can create an index using cURL like this:
 
 ```
 ~$ curl -XPUT "http://localhost:9200/places"
 ```
 
-but in this task you should use Go Elasticsearch bindings to do the same thing. Next thing you have to do is to provide type mappings for our data. With cURL it will look like this:
+But in this task you should use Go's Elasticsearch bindings to do the same thing. The next thing you need to do is provide type mappings for our data. With cURL it will look like this:
 
 ```
 ~$ curl -XPUT http://localhost:9200/places/place/_mapping?include_type_name=true -H "Content-Type: application/json" -d @"schema.json"
@@ -105,11 +105,11 @@ where `schema.json` looks like this:
 }
 ```
 
-Once again, provided cURL commands are just a reference for self-testing, this action should be performed by the Go program you write.
+Again, assuming the cURL commands are just a reference for self-testing, this action should be performed by the Go program you write.
 
-Now you have a dataset to upload. You should use [Bulk API](https://www.elastic.co/guide/en/elasticsearch/reference/8.4/docs-bulk.html) to perform that. All existing Elasticsearch bindings provide wrappers for it, for example, [here is a good example](https://github.com/elastic/go-elasticsearch/blob/master/_examples/bulk/indexer.go) for an official client<!--- (keep in mind that you'll need to use client v7 for ES version 7.9, not v8)-->. There are also a couple of third-party clients, choose whichever you prefer.
+Now you have a dataset to upload. You should use the [Bulk API](https://www.elastic.co/guide/en/elasticsearch/reference/8.4/docs-bulk.html) to do this. All existing Elasticsearch bindings provide wrappers for this, for example [here's a good example](https://github.com/elastic/go-elasticsearch/blob/master/_examples/bulk/indexer.go) for an official client<!--- (note that you need to use client v7 for ES version 7.9, not v8)-->. There are also a number of third-party clients, choose which you prefer.
 
-To check yourself, you may use cURL. So,
+To check yourself, you can use cURL. Like this:
 
 ```
 ~$ curl -s -XGET "http://localhost:9200/places"
@@ -184,12 +184,12 @@ and querying entry by its ID will look like this:
 }
 ```
 
-Please note, that the entry with ID=1 may be different from the one in dataset if you decided to use goroutines to speed up the process (that's not a requirement in this task though).
+Note that the entry with ID=1 may be different from the one in the dataset if you have decided to use goroutines to speed up the process (this is not a requirement for this task, though).
 
 <h2 id="chapter-v" >Chapter V</h2>
 <h3 id="ex01">Exercise 01: Simplest Interface</h3>
 
-Now let's create an HTML UI for our database. Not much, we just need to render a page with a list of names, addresses and phones so user could see it in a browser.
+Now let's create an HTML UI for our database. Not much, we just need to render a page with a list of names, addresses, and phones so that users can see it in a browser.
 
 You should abstract your database behind an interface. To just return the list of entries and be able to [paginate](https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html) through them, this interface is enough:
 
@@ -200,9 +200,9 @@ type Store interface {
 }
 ```
 
-There should be no Elasticsearch-related imports in `main` package, as all database-related stuff should rest in `db` package inside your project, and you should only use this interface above to interact with it.
+There should be no Elasticsearch-related imports in the `main` package, as all database-related stuff should reside in the `db` package within your project, and you should only use this interface above to interact with it.
 
-Your HTTP application should run on port 8888, responding with a list of restaurants and providing a simple pagination over it. So. when querying "http://127.0.0.1:8888/?page=2" (mind the 'page' GET param) you should be getting a page like this:
+Your HTTP application should run on port 8888, respond with a list of restaurants, and provide a simple pagination over it. So. if you query "http://127.0.0.1:8888/?page=2" (note the `page` GET param), you should get a page like this:
 
 ```
 <!doctype html>
@@ -275,9 +275,9 @@ Your HTTP application should run on port 8888, responding with a list of restaur
 </html>
 ```
 
-A "Previous" link should disappear on page 1 and "Next" link should disappear on last page.
+A "Previous" link should disappear on page 1 and a "Next" link should disappear on the last page.
 
-IMPORTANT NOTE: You may notice that by default Elasticsearch doesn't allow you to deal with pagination for more than 10000 entries. There are two ways to overcome this - either use a Scroll API (refer to the same link on pagination above) or just raise the limit in index settings specifically for this task. The latter is acceptable for this task, but is not the recommended way to do it in production. The query that will help you to set it is below:
+IMPORTANT NOTE: You may notice that by default Elasticsearch doesn't allow you to handle pagination for more than 10000 entries. There are two ways to work around this — either use a Scroll API (see the same link on pagination above), or simply increase the limit in the index settings specifically for this task. The latter is acceptable for this task, but not the recommended way to do it in production. The query that will help you set this is below:
 
 ```
 ~$ curl -XPUT -H "Content-Type: application/json" "http://localhost:9200/places/_settings" -d '
@@ -288,16 +288,16 @@ IMPORTANT NOTE: You may notice that by default Elasticsearch doesn't allow you t
 }'
 ```
 
-Also, in case 'page' param is specified with a wrong value (outside [0..last_page] or not numeric) your page should return HTTP 400 error and plain text with an error description:
+Also, if the 'page' param is specified with a wrong value (outside [0..last_page] or not numeric), your page should return an HTTP 400 error and plain text with an error description:
 
 ```
-Invalid 'page' value: 'foo'
+Invalid 'page' value: 'foo'.
 ```
 
 <h2 id="chapter-vi" >Chapter VI</h2>
 <h3 id="ex02">Exercise 02: Proper API</h3>
 
-In modern world most applications prefer APIs over just plain HTML. So, in this exercise all you have to do is implement another handler which responds with `Content-Type: application/json` and JSON version of the same thing as in Ex01 (example for http://127.0.0.1:8888/api/places?page=3):
+In the modern world, most applications prefer APIs to plain HTML. So in this exercise, all you need to do is implement another handler that responds with `Content-Type: application/json` and JSON version of the same thing as in Ex01 (example for http://127.0.0.1:8888/api/places?page=3):
 
 ```
 {
@@ -411,7 +411,7 @@ In modern world most applications prefer APIs over just plain HTML. So, in this 
 }
 ```
 
-Also, in case 'page' param is specified with a wrong value (outside [0..last_page] or not numeric) your API should respond with a corresponding HTTP 400 error and similar JSON:
+Also, if the 'page' param is specified with an incorrect value (outside of [0..last_page] or not numeric), your API should respond with an appropriate HTTP 400 error and similar JSON:
 
 ```
 {
@@ -422,7 +422,7 @@ Also, in case 'page' param is specified with a wrong value (outside [0..last_pag
 <h2 id="chapter-vii" >Chapter VII</h2>
 <h3 id="ex03">Exercise 03: Closest Restaurants</h3>
 
-Now let's implement our main piece of functionality - searching for *three* closest restaurants! In order to do that, you'll have to configure sorting for your query:
+Now let's implement our main feature — finding *three* closest restaurants! To do this, you'll need to configure sorting for your query:
 
 ```
 "sort": [
@@ -442,7 +442,7 @@ Now let's implement our main piece of functionality - searching for *three* clos
 ]
 ```
 
-where "lat" and "lon" are your current coordinates. So, for an URL http://127.0.0.1:8888/api/recommend?lat=55.674&lon=37.666 your application should return JSON like this:
+where "lat" and "lon" are your current coordinates. So for a URL like http://127.0.0.1:8888/api/recommend?lat=55.674&lon=37.666, your application should return JSON like this:
 
 ```
 {
@@ -485,9 +485,9 @@ where "lat" and "lon" are your current coordinates. So, for an URL http://127.0.
 <h2 id="chapter-viii" >Chapter VIII</h2>
 <h3 id="ex04">Exercise 04: JWT</h3>
 
-So, the last (but not least) thing that we have to do is to provide some simple form of authentication. Currently the one of the most popular ways of implementing that for an API is by using [JWT](https://jwt.io/introduction/). Luckily, Go has a pretty good set of tooling to deal with it.
+So the last (but not least) thing we need to do is to provide a simple form of authentication. Currently, one of the most popular ways to implement this for an API is to use [JWT](https://jwt.io/introduction/). Fortunately, Go has a pretty good set of tools to deal with this.
 
-First, you have to implement an API endpoint http://127.0.0.1:8888/api/get_token which sole purpose will be to generate a token and return it, like this (this is an example, your token will likely be different):
+First, you need to implement an API endpoint http://127.0.0.1:8888/api/get_token whose sole purpose will be to generate a token and return it like this (this is an example, your token will likely be different):
 
 ```
 {
@@ -495,12 +495,12 @@ First, you have to implement an API endpoint http://127.0.0.1:8888/api/get_token
 }
 ```
 
-Don't forget to set header 'Content-Type: application/json'.
+Don't forget to set the 'Content-Type: application/json' header.
 
-Second, you have to protect your `/api/recommend` endpoint with a JWT middleware, that will check the validity of this token.
+Second, you need to protect your `/api/recommend` endpoint with JWT middleware that checks the validity of this token.
 
-So by default when querying this API from the browser it should now fail with an HTTP 401 error, but work when `Authorization: Bearer <token>` header is specified by the client (you may check this using cURL or Postman).
+So by default, when this API is requested from the browser, it should now fail with an HTTP 401 error, but work if `Authorization: Bearer <token>` header is provided by the client (you can check this using cURL or Postman).
 
-This is a simplest way to provide authentication, no need to go deeper in details for now.
+This is the simplest way to provide authentication, no need to go into details for now.
 
 
