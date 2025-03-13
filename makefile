@@ -1,5 +1,5 @@
 newrepo:
-	curl -u 'mysokolsky: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' https://api.github.com/user/repos -d'{"name":"GO/Go_Day03"}'
+	curl -u 'mysokolsky:TOKEN' https://api.github.com/user/repos -d'{"name":"GO/Go_Day03"}'
 	git init
 	git checkout -b develop
 	git add .
