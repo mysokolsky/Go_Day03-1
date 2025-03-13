@@ -9,5 +9,3 @@ cd ~
 curl --output elasticsearch-8.4.2-darwin-x86_64.tar.gz <ССЫЛКА>
 tar -xzf elasticsearch-8.4.2-darwin-x86_64.tar.gz
 ./elasticsearch-8.4.2/bin/elasticsearch
-
-
