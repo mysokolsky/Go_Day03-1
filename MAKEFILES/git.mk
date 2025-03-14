@@ -33,5 +33,5 @@ create-repo:
 	curl -u 'mysokolsky:$(GITHUB_TOKEN)' https://api.github.com/user/repos -d'{"name":"$(GITHUBPROJECTNAME)"}'
 
 add-remote-repo:
-	git remote set-url --add --push origin https://github.com/mysokolsky/$(GITHUBPROJECTNAME).git
+	git remote set-url --add --push origin git@github.com:mysokolsky/$(GITHUBPROJECTNAME).git
 	git remote -v
