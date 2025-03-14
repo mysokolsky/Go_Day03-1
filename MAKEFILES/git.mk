@@ -29,7 +29,7 @@ init:
 new-branch-develop:
 	git checkout -b develop
 
-create-repo: init develop commit
+create-repo: init new-branch-develop commit
 	curl -u 'mysokolsky:$(GITHUB_TOKEN)' https://api.github.com/user/repos -d'{"name":"$(GITHUBPROJECTNAME)"}'
 
 add-remote-repo:
