@@ -5,6 +5,7 @@ GITHUBPROJECTNAME:=$(shell basename $(shell pwd))
 
 GITHUB_TOKEN:=$(shell cat github_token.tok)
 
+GITLABPROJECTURL:=$(shell git remote get-url origin)
 
 add:
 	git add .; sleep 1
@@ -32,6 +33,12 @@ new-branch-develop:
 create-repo:
 	curl -u 'mysokolsky:$(GITHUB_TOKEN)' https://api.github.com/user/repos -d'{"name":"$(GITHUBPROJECTNAME)"}'
 
+# сначала уверждение гитлаб-репозитория как основного синхронизируемого, а потом подключение дополнительного для закачки репозитория на гитхаб
 add-remote-repo:
+	git remote add origin $(GITLABPROJECTURL)
 	git remote set-url --add --push origin git@github.com:mysokolsky/$(GITHUBPROJECTNAME).git
 	git remote -v
+# обнуление пуш-адресов
+# git remote set-url --push origin ""
+# проверка
+# git remote get-url --push origin
