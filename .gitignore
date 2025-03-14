@@ -53,3 +53,4 @@ dkms.conf
 
 # Tokens
 github_token.tok
+gitlab_token.tok
