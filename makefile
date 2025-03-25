@@ -1,13 +1,16 @@
 OS := $(shell uname -s)
 
-elastic_run:
-ifeq ($(OS), Darwin)
-	@bash elastic_run_MAC.txt
-else
-	@bash elastic_run_WSL.txt
-endif
+run_elastic:
+	@echo "Starting Elasticsearch..."
+	@if [ "$$(uname)" = "Darwin" ]; then \
+		open -a Terminal "$(shell cat elastic_run_MAC.txt)"; \
+	elif grep -qi microsoft /proc/version; then \
+		wsl.exe -d Ubuntu -- bash -c "$(shell cat elastic_run_WSL.txt)"; \
+	else \
+		echo "Unsupported OS"; \
+	fi
 
-elastic_test:
+test_elastic:
 ifeq ($(OS), Darwin)
 	@bash elastic_test_MAC.txt
 else
