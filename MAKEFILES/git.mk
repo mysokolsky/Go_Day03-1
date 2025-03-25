@@ -35,8 +35,11 @@ create-repo:
 
 # сначала уверждение гитлаб-репозитория как основного синхронизируемого, а потом подключение дополнительного для закачки репозитория на гитхаб
 add-remote-repo:
-	git remote add origin $(GITLABPROJECTURL)
+	@echo "GITLABPROJECTURL=$(GITLABPROJECTURL)"
+	git remote remove origin
+	-git remote add origin $(GITLABPROJECTURL) 
 	git remote set-url --add --push origin git@github.com:mysokolsky/$(GITHUBPROJECTNAME).git
+	git remote set-url --add --push origin $(GITLABPROJECTURL)
 	git remote -v
 # обнуление пуш-адресов
 # git remote set-url --push origin ""
