@@ -5,7 +5,7 @@ run_elastic:
 	@if [ "$$(uname)" = "Darwin" ]; then \
 		osascript -e 'tell application "Terminal" to do script  "$(shell cat elastic_run_MAC.txt)"'; \
 	elif grep -qi microsoft /proc/version; then \
-		wsl.exe -d Ubuntu -- bash -c "$(shell cat elastic_run_WSL.txt)"; \
+		cmd.exe /c start wsl bash -c '$(shell cat elastic_run_WSL.txt); exec bash'; \
 	else \
 		echo "Unsupported OS"; \
 	fi
