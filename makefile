@@ -3,7 +3,7 @@ OS := $(shell uname -s)
 run_elastic:
 	@echo "Starting Elasticsearch..."
 	@if [ "$$(uname)" = "Darwin" ]; then \
-		open -a Terminal "$(shell cat elastic_run_MAC.txt)"; \
+		osascript -e 'tell application "Terminal" to do script  "$(shell cat elastic_run_MAC.txt)"'; \
 	elif grep -qi microsoft /proc/version; then \
 		wsl.exe -d Ubuntu -- bash -c "$(shell cat elastic_run_WSL.txt)"; \
 	else \
