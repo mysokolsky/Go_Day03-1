@@ -1,0 +1,1 @@
+curl -XGET -k -u elastic:aWl-v68rt1TSmzKuqPk- "https://127.0.0.1:9200/"
