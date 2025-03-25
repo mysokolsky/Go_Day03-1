@@ -1,10 +1,18 @@
+OS := $(shell uname -s)
+
 elastic_run:
-	$(shell cat elastic_run_MAC.txt)
-	$(shell cat elastic_run_WSL.txt)
+ifeq ($(OS), Darwin)
+	@bash elastic_run_MAC.txt
+else
+	@bash elastic_run_WSL.txt
+endif
 
 elastic_test:
-	$(shell cat elastic_test_MAC.txt)
-	$(shell cat elastic_test_WSL.txt)
+ifeq ($(OS), Darwin)
+	@bash elastic_test_MAC.txt
+else
+	@bash elastic_test_WSL.txt
+endif
 
 clean:
 	@make removecash
