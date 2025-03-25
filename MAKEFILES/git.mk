@@ -41,7 +41,7 @@ add-remote-repo:
 	-git remote add origin $(GITLABPROJECTURL)
 # наконец добавим ссылки на push в гитхаб и в придётся ещё раз сделать для гитлаб 
 	git remote set-url --add --push origin git@github.com:mysokolsky/$(GITHUBPROJECTNAME).git
-	# git remote set-url --add --push origin $(GITLABPROJECTURL)
+	git remote set-url --add --push origin $(GITLABPROJECTURL)
 # выведем на экран для контроля, куда привязали
 	git remote -v
 
