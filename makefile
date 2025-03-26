@@ -14,6 +14,12 @@ else
 	@bash elastic_test_WSL.txt
 endif
 
+gomodinit:
+	go mod init $(shell basename $(PWD))
+
+gogetelastic:
+	go get github.com/elastic/go-elasticsearch/v8
+
 clean:
 	@make removecash
 
