@@ -1,4 +1,4 @@
-OS := $(shell uname -s)
+OS:=$(shell uname -s)
 
 LOCAL_PATH_ELASTIC:=/bin/elasticsearch
 ELASTIC_PASS_RESET_ADDON:=-reset-password -u elastic -b
@@ -19,11 +19,11 @@ else
 endif
 
 change_password:
-	$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)$(ELASTIC_PASS_RESET_ADDON) | tail -n 1 | awk '{print $$NF}' | tr -d '\n' > $(PASSWORD_FILE)
+	@$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)$(ELASTIC_PASS_RESET_ADDON) | tail -n 1 | awk '{print $$NF}' | tr -d '\n' > $(PASSWORD_FILE)
 
 
-test_elastic: change_password
-	curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
+test_elastic:
+	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
 
 gomodinit:
 	go mod init $(shell basename $(PWD))
