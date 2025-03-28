@@ -45,14 +45,16 @@ import (
 // Longitude
 // Latitude
 
-struct Restaurants {
-	Name string 
-	Address string
-	Phone string
-	Location{
-	  Longitude
-	  Latitude
-	}
+type Location struct {
+	Longitude float64
+	Latitude  float64
+}
+
+type Restaurants struct {
+	Name     string
+	Address  string
+	Phone    string
+	Location Location
 }
 
 func getElasticPassword() string {
