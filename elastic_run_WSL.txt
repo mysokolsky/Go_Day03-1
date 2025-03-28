@@ -1,1 +1,0 @@
-/mnt/c/Users/sokmih01/Downloads/elasticsearch-8.17.4/bin/elasticsearch
