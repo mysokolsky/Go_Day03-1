@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"runtime"
 
 	// сначала нужно перейти в корневую папку Go_Day03-1
 	// потом поскольку там нет файла go.mod + go.sum, создать их командой go mod init $(basename $(PWD)) или запустить цель make gomodinit
@@ -21,14 +23,23 @@ import (
 // Longitude
 // Latitude
 
+func getElasticPassword() string {
+	filename := "../elastic_pass_MAC.txt"
+	if runtime.GOOS == "linux" {
+		filename = "../elastic_pass_WSL.txt"
+	}
+	data, _ := os.ReadFile(filename)
+	return string(data)
+}
+
 func main() {
 	// Создаем клиент Elasticsearch с использованием HTTPS и аутентификации
 	es, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: []string{
 			"https://localhost:9200", // Ваш сервер Elasticsearch
 		},
-		Username: "elastic",              // Имя пользователя
-		Password: "aWl-v68rt1TSmzKuqPk-", // Ваш пароль
+		Username: "elastic",            // Имя пользователя
+		Password: getElasticPassword(), // Ваш пароль
 		// Insecure: true,                   // Включить, если не хотите проверять сертификат SSL (не рекомендуется для продакшн-окружения)
 		// Примечание: можете добавить параметры для пропуска проверки сертификатов, если нужно
 		Transport: &http.Transport{

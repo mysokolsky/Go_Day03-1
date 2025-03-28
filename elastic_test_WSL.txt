@@ -1,1 +1,0 @@
-curl -XGET -k -u elastic:VDEf8X4lAXe_gHyGwKc8 "https://127.0.0.1:9200/"

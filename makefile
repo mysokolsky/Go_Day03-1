@@ -1,5 +1,11 @@
 OS := $(shell uname -s)
 
+ifeq ($(OS), Darwin)
+	PASSWORD_FILE:=elastic_pass_MAC.txt
+else
+	PASSWORD_FILE:=elastic_pass_WSL.txt
+endif
+
 run_elastic:
 ifeq ($(OS), Darwin)
 	@osascript -e 'tell application "Terminal" to do script  "$(shell cat elastic_run_MAC.txt)"'
@@ -8,11 +14,7 @@ else
 endif
 
 test_elastic:
-ifeq ($(OS), Darwin)
-	@bash elastic_test_MAC.txt
-else
-	@bash elastic_test_WSL.txt
-endif
+	curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
 
 gomodinit:
 	go mod init $(shell basename $(PWD))
