@@ -11,7 +11,7 @@ else
 	ELASTIC_PATH:=$(shell cat elastic_dir_WSL.txt)
 endif
 
-run_elastic: change_password
+run_elastic:
 ifeq ($(OS), Darwin)
 	@osascript -e 'tell application "Terminal" to do script  "$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)"'
 else
@@ -24,6 +24,9 @@ change_password:
 
 test_elastic:
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
+
+test_ind:
+	curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "http://localhost:9200/places"
 
 gomodinit:
 	go mod init $(shell basename $(PWD))

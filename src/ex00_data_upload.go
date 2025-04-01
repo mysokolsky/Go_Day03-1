@@ -46,15 +46,15 @@ import (
 // Latitude
 
 type Location struct {
-	Longitude float64
-	Latitude  float64
+	Longitude float64 `json:"lon"`
+	Latitude  float64 `json:"lat"`
 }
 
 type Restaurants struct {
-	Name     string
-	Address  string
-	Phone    string
-	Location Location
+	Name     string   `json:"name"`
+	Address  string   `json:"address"`
+	Phone    string   `json:"phone"`
+	Location Location `json:"location"`
 }
 
 func getElasticPassword() string {
