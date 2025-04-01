@@ -46,8 +46,8 @@ import (
 // Latitude
 
 type Location struct {
-	Longitude float64 `json:"lon"`
-	Latitude  float64 `json:"lat"`
+	Longitude float64 `csv:"longitude" json:"lon"`
+	Latitude  float64 `csv:"latitude" json:"lat"`
 }
 
 type Restaurants struct {
