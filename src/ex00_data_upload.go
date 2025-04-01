@@ -74,8 +74,7 @@ func main() {
 		},
 		Username: "elastic",            // Имя пользователя
 		Password: getElasticPassword(), // Ваш пароль
-		// Insecure: true,                   // Включить, если не хотите проверять сертификат SSL (не рекомендуется для продакшн-окружения)
-		// Примечание: можете добавить параметры для пропуска проверки сертификатов, если нужно
+
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true, // Отключаем проверку сертификата (для разработки)
