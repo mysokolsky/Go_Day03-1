@@ -36,6 +36,10 @@ import (
 	// потом поскольку там нет файла go.mod + go.sum, создать их командой go mod init $(basename $(PWD)) или запустить цель make gomodinit
 	// потом установить библиотеку go get github.com/elastic/go-elasticsearch/v8 или запустить цель make gogetelastic
 	"github.com/elastic/go-elasticsearch/v8"
+
+	// сначала нужно закачать библиотеку командой go get github.com/gocarina/gocsv
+	"encoding/csv"
+	"github.com/gocarina/gocsv"
 )
 
 // ID
@@ -46,14 +50,14 @@ import (
 // Latitude
 
 type Location struct {
-	Longitude float64 `csv:"longitude" json:"lon"`
-	Latitude  float64 `csv:"latitude" json:"lat"`
+	Longitude float64 `csv:"Longitude" json:"lon"`
+	Latitude  float64 `csv:"Latitude" json:"lat"`
 }
 
 type Restaurants struct {
-	Name     string   `json:"name"`
-	Address  string   `json:"address"`
-	Phone    string   `json:"phone"`
+	Name     string   `csv:"Name" json:"name"`
+	Address  string   `csv:"Address" json:"address"`
+	Phone    string   `csv:"Phone" json:"phone"`
 	Location Location `json:"location"`
 }
 
