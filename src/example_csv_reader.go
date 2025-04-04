@@ -53,11 +53,14 @@ func main() {
 
 func readFromCSV(file *os.File, c chan RestaurantsCSV) {
 
-	// Создаём новый CSV-ридер с настроенными параметрами
-	reader := csv.NewReader(file)
-	reader.Comma = '\t'         // Указываем разделитель (табуляция)
-	reader.LazyQuotes = true    // Разрешаем необычные кавычки
-	reader.FieldsPerRecord = -1 // Не проверяем количество полей
+	// Настройка CSV-ридера
+	gocsv.SetCSVReader(func(r io.Reader) gocsv.CSVReader {
+		reader := csv.NewReader(r)
+		reader.Comma = '\t'
+		reader.LazyQuotes = true
+		reader.FieldsPerRecord = -1
+		return reader
+	})
 
 	// Запускаем асинхронное чтение и отправку в канал
 	go func() {
