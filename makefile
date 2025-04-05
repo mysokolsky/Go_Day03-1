@@ -1,7 +1,7 @@
 OS:=$(shell uname -s)
 
 LOCAL_PATH_ELASTIC:=/bin/elasticsearch
-ELASTIC_PASS_RESET_ADDON:=-reset-password -u elastic -b
+ELASTIC_PASS_RESET_ADDON:=-reset-password -u elastic -b --url "https://localhost:9200"
 
 ifeq ($(OS), Darwin)
 	PASSWORD_FILE:=elastic_pass_MAC.txt
@@ -17,10 +17,11 @@ ifeq ($(OS), Darwin)
 else
 	@cmd.exe /c start wsl bash -c '$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC); exec bash'
 endif
+	@sleep 5 && while ! curl -s -k "https://127.0.0.1:9200" >/dev/null; do sleep 2; done
+	@$(MAKE) --no-print-directory change_password
 
 change_password:
 	@$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)$(ELASTIC_PASS_RESET_ADDON) | tail -n 1 | awk '{print $$NF}' | tr -d '\n' > $(PASSWORD_FILE)
-
 
 test_elastic:
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
