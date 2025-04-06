@@ -1,31 +1,43 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"crypto/tls"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"os"
+	"runtime"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/esutil"
 	"github.com/gocarina/gocsv"
 )
 
-// type Industry struct {
-// 	CompanyName                string `csv:"Organization Name"`
-// 	LinkedIn                   string `csv:"LinkedIn"`
-// 	Website                    string `csv:"Website"`
-// 	TotalFundingAmount         int    `csv:"Total Funding Amount"`
-// 	TotalFundingAmountCurrency string `csv:"Total Funding Amount Currency"`
-// 	HeadquartersLocation       string `csv:"Headquarters Location"`
-// }
-
 // 5.57ms -> 600 records (read)
 func main() {
-	now := time.Now()
-	// readChannel := make(chan Industry, 1)
-	readChannel := make(chan RestaurantsCSV, 25)
 
-	// readFilePath := "process.csv"
+	es := initElasticsearch()
+
+	CreateElasticIndex(es)
+
+	fmt.Fprintf(os.Stderr, "Ты здесь!")
+
+	bi := initBulkIndexer(es)
+	// defer bi.Close(context.Background())
+
+	now := time.Now()
+
+	readChannel := make(chan RestaurantsCSV, 25) // создали канал ёмкостью 25 объектов типа RestaurantsCSV
+
 	readFilePath := "../materials/data.csv"
 
 	// Open the CSV readFile
@@ -35,20 +47,172 @@ func main() {
 	}
 	defer readFile.Close()
 
-	count := 0
-	readFromCSV(readFile, readChannel)
+	var count int64 = 0 // количество строк
+	go readFromCSV(readFile, readChannel)
 
-	// Print the records
-	for r := range readChannel {
-		fmt.Println("========================================")
-		fmt.Println(r)
-		fmt.Println("========================================")
-		fmt.Println()
+	// Воркеры читают из канала
+	var wg sync.WaitGroup
+	workerCount := 5 // количество воркеров
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for r := range readChannel {
+				val, _ := json.Marshal(r.ToRestaurants())
+				// fmt.Println(string(val))
 
-		count++
+				bi.Add(
+					context.Background(),
+					esutil.BulkIndexerItem{
+						Action: "index",
+						Body:   bytes.NewReader(val),
+						OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem, err error) {
+							if err != nil {
+								log.Printf("Ошибка записи в Elasticsearch: %v", err)
+							}
+							if resp.Error.Type != "" {
+								log.Printf("Ошибка в ответе Elasticsearch: %v", resp.Error)
+							}
+						},
+					},
+				)
+
+				atomic.AddInt64(&count, 1)
+			}
+		}()
 	}
 
-	fmt.Println(time.Since(now), count)
+	wg.Wait()
+
+	// ⚠️ Закрываем BulkIndexer только после всех воркеров!
+	if err := bi.Close(context.Background()); err != nil {
+		log.Fatalf("Ошибка при закрытии BulkIndexer: %s", err)
+	}
+	stats := bi.Stats()
+	if stats.NumFailed > 0 {
+		log.Fatalf("❌ Не удалось индексировать %d документов", stats.NumFailed)
+	}
+	fmt.Printf("✅ Успешно: %d, 🛑 Ошибки: %d\n",
+		stats.NumFlushed, stats.NumFailed)
+
+	// Печатаем результат
+	fmt.Println("⌛ Время:", time.Since(now), "Кол-во загруженных:", atomic.LoadInt64(&count))
+
+	// Считаем и читаем данные из эластика
+	countDocuments(es, "places")
+	readFromElastic(es)
+
+}
+
+func CreateElasticIndex(es *elasticsearch.Client) {
+
+	// Читаем только содержимое properties
+	schemaFile, err := os.ReadFile("../schema.json")
+	if err != nil {
+		log.Fatalf("Ошибка при чтении schema.json: %s", err)
+	}
+
+	// Оборачиваем содержимое в структуру с "mappings"
+	mapping := fmt.Sprintf(`{"mappings": %s}`, string(schemaFile))
+
+	res, err := es.Indices.Exists([]string{"places"})
+	if err != nil {
+		log.Fatalf("Ошибка при проверке индекса: %s", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == 200 {
+		res, err = es.Indices.Delete([]string{"places"})
+		if err != nil {
+			log.Fatalf("Ошибка при удалении индекса: %s", err)
+		}
+	}
+	// Создание индекса "places"
+	res, err = es.Indices.Create("places", es.Indices.Create.WithBody(bytes.NewReader([]byte(mapping))))
+	if err != nil {
+		log.Fatalf("Ошибка создания индекса: %s", err)
+	}
+
+	// Читаем тело ответа
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatalf("Ошибка чтения ответа: %s", err)
+	}
+
+	// Проверяем код ответа
+	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusCreated {
+		log.Fatalf("Ошибка при создании индекса: %s\nОтвет: %s", res.Status(), string(body))
+	}
+
+	fmt.Println("✅ Индекс 'places' успешно создан!")
+	fmt.Println("Ответ от Elasticsearch:", string(body))
+
+}
+
+func getElasticPassword() string {
+	filename := "../elastic_pass_MAC.txt"
+	if runtime.GOOS == "linux" {
+		filename = "../elastic_pass_WSL.txt"
+	}
+	data, _ := os.ReadFile(filename)
+	return string(data)
+}
+
+func initElasticsearch() *elasticsearch.Client {
+	// Создаем клиент Elasticsearch с использованием HTTPS и аутентификации
+	es, err := elasticsearch.NewClient(elasticsearch.Config{
+		Addresses: []string{
+			"https://localhost:9200", // Ваш сервер Elasticsearch
+		},
+		Username: "elastic",            // Имя пользователя
+		Password: getElasticPassword(), // Ваш пароль
+
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // Отключаем проверку сертификата (для разработки)
+			},
+		},
+	})
+	if err != nil {
+		log.Fatalf("Ошибка при создании клиента: %v", err)
+	}
+
+	// Проверяем соединение с сервером
+	res, err := es.Info()
+	if err != nil {
+		log.Fatalf("Ошибка при подключении к Elasticsearch: %v", err)
+	}
+	defer res.Body.Close()
+
+	// Читаем тело ответа
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatalf("Ошибка чтения ответа: %v", err)
+	}
+
+	// Выводим ответ
+	fmt.Println("Ответ от сервера:", string(body))
+
+	return es
+}
+
+func initBulkIndexer(es *elasticsearch.Client) esutil.BulkIndexer {
+	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
+		Client:        es,
+		Index:         "places",         // 🔁 Имя индекса
+		NumWorkers:    runtime.NumCPU(), // Кол-во воркеров
+		FlushBytes:    10e+6,            // Примерно 10MB
+		FlushInterval: 10 * time.Second,
+		OnFlushStart: func(ctx context.Context) context.Context {
+			log.Println("▶ Начало флаша данных...")
+			return ctx
+		},
+	})
+	if err != nil {
+		log.Fatalf("Ошибка при создании BulkIndexer: %s", err)
+	}
+
+	return bi
 }
 
 func readFromCSV(file *os.File, c chan RestaurantsCSV) {
@@ -64,11 +228,97 @@ func readFromCSV(file *os.File, c chan RestaurantsCSV) {
 
 	// Запускаем асинхронное чтение и отправку в канал
 	go func() {
+
 		// Пытаемся распарсить весь файл в канал
 		err := gocsv.UnmarshalToChan(file, c)
 		if err != nil {
+			close(c) // закрываем канал
 			fmt.Println("Ошибка при чтении CSV:", err)
-			close(c) // Закрываем канал, если произошла ошибка
 		}
 	}()
 }
+
+func countDocuments(es *elasticsearch.Client, index string) {
+	res, err := es.Count(
+		es.Count.WithIndex(index),
+	)
+	if err != nil {
+		log.Fatalf("Ошибка при подсчёте документов: %s", err)
+	}
+	defer res.Body.Close()
+
+	body, _ := io.ReadAll(res.Body)
+	fmt.Println("📊 Количество документов в индексе:", string(body))
+}
+
+func readFromElastic(es *elasticsearch.Client) {
+	query := `{
+		"query": {
+			"match_all": {}
+		}
+	}`
+
+	res, err := es.Search(
+		es.Search.WithIndex("places"),
+		es.Search.WithBody(strings.NewReader(query)),
+		es.Search.WithPretty(),
+	)
+	if err != nil {
+		log.Fatalf("Ошибка поиска: %s", err)
+	}
+	defer res.Body.Close()
+
+	var result struct {
+		Hits struct {
+			Hits []struct {
+				Source Restaurants `json:"_source"`
+			} `json:"hits"`
+		} `json:"hits"`
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
+		log.Fatalf("Ошибка при декодировании: %s", err)
+	}
+
+	fmt.Println("Печатаем результаты по индексу places из базы Elastic:")
+
+	// Выводим найденные рестораны
+	for _, hit := range result.Hits.Hits {
+		fmt.Printf("🍽️  %s, %s [%s]\n", hit.Source.Name, hit.Source.Address, hit.Source.Phone)
+	}
+}
+
+// func readFromElastic(es *elasticsearch.Client) {
+// 	query := `{
+// 		"query": {
+// 			"match_all": {}
+// 		},
+// 		"size": 10
+// 	}`
+
+// 	res, err := es.Search(
+// 		es.Search.WithIndex("places"),
+// 		es.Search.WithBody(strings.NewReader(query)),
+// 		es.Search.WithPretty(),
+// 	)
+// 	if err != nil {
+// 		log.Fatalf("Ошибка при запросе к Elasticsearch: %s", err)
+// 	}
+// 	defer res.Body.Close()
+
+// 	if res.IsError() {
+// 		log.Fatalf("Ошибка ответа: %s", res.String())
+// 	}
+
+// 	var result map[string]interface{}
+// 	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
+// 		log.Fatalf("Ошибка при декодировании JSON: %s", err)
+// 	}
+
+// 	hits := result["hits"].(map[string]interface{})["hits"].([]interface{})
+// 	for _, hit := range hits {
+// 		doc := hit.(map[string]interface{})["_source"]
+// 		docJSON, _ := json.MarshalIndent(doc, "", "  ")
+// 		fmt.Println(string(docJSON))
+// 	}
+// }
