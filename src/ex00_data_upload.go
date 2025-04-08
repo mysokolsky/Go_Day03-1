@@ -110,7 +110,7 @@ func main() {
 	countDocuments(es, "places")
 	readFromElastic(es)
 
-	// scrollAllDocuments(es, "places")
+	scrollAllDocuments(es, "places")
 
 }
 

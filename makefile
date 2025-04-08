@@ -26,8 +26,11 @@ change_password:
 test_elastic:
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
 
-test_ind:
-	curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "http://localhost:9200/places"
+test_index:
+	curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places"
+
+test_item:
+	curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_search?scroll=1m" -H 'Content-Type: application/json' -d'{"size": 3,"query": {"match_all": {}}}'
 
 gomodinit:
 	go mod init $(shell basename $(PWD))
