@@ -38,7 +38,7 @@ func main() {
 
 	now := time.Now()
 
-	readChannel := make(chan RestaurantsCSV, 1) // создали канал ёмкостью 25 объектов типа RestaurantsCSV
+	readChannel := make(chan RestaurantsCSV, 5) // создали канал ёмкостью 25 объектов типа RestaurantsCSV
 
 	readFilePath := "../materials/data.csv"
 
