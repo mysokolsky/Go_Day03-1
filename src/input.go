@@ -22,37 +22,13 @@
 
 package main
 
-import (
-// "bytes"
-// "crypto/tls"
-// "fmt"
-// "io"
-// "log"
-// "net/http"
-// "os"
-// "runtime"
-// сначала нужно перейти в корневую папку Go_Day03-1
-// потом поскольку там нет файла go.mod + go.sum, создать их командой go mod init $(basename $(PWD)) или запустить цель make gomodinit
-// потом установить библиотеку go get github.com/elastic/go-elasticsearch/v8 или запустить цель make gogetelastic
-// "github.com/elastic/go-elasticsearch/v8"
-// сначала нужно закачать библиотеку командой go get github.com/gocarina/gocsv
-// "encoding/csv"
-// "github.com/gocarina/gocsv"
-)
-
-// ID
-// Name
-// Address
-// Phone
-// Longitude
-// Latitude
-
 type Location struct {
-	Longitude float64 `json:"lon"`
 	Latitude  float64 `json:"lat"`
+	Longitude float64 `json:"lon"`
 }
 
 type Restaurants struct {
+	ID       uint64
 	Name     string   `json:"name"`
 	Address  string   `json:"address"`
 	Phone    string   `json:"phone"`
@@ -60,11 +36,12 @@ type Restaurants struct {
 }
 
 type RestaurantsCSV struct {
+	ID        uint64  `csv:"ID"`
 	Name      string  `csv:"Name"`
 	Address   string  `csv:"Address"`
 	Phone     string  `csv:"Phone"`
-	Longitude float64 `csv:"Longitude"`
 	Latitude  float64 `csv:"Latitude"`
+	Longitude float64 `csv:"Longitude"`
 }
 
 func (r RestaurantsCSV) ToRestaurants() Restaurants {
@@ -73,8 +50,8 @@ func (r RestaurantsCSV) ToRestaurants() Restaurants {
 		Address: r.Address,
 		Phone:   r.Phone,
 		Location: Location{
-			Longitude: r.Longitude,
 			Latitude:  r.Latitude,
+			Longitude: r.Longitude,
 		},
 	}
 }

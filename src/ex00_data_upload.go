@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -19,7 +21,7 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esutil"
-	"github.com/gocarina/gocsv"
+	// "github.com/gocarina/gocsv"
 )
 
 // 5.57ms -> 600 records (read)
@@ -31,14 +33,11 @@ func main() {
 
 	scrollAllDocuments(es, "places")
 
-	fmt.Fprintf(os.Stderr, "Ты здесь!")
-
 	bi := initBulkIndexer(es)
-	// defer bi.Close(context.Background())
 
 	now := time.Now()
 
-	readChannel := make(chan RestaurantsCSV, 5) // создали канал ёмкостью 25 объектов типа RestaurantsCSV
+	readChannel := make(chan RestaurantsCSV, 25) // создали канал ёмкостью 25 объектов типа RestaurantsCSV
 
 	readFilePath := "../materials/data.csv"
 
@@ -60,14 +59,16 @@ func main() {
 		go func() {
 			defer wg.Done()
 			for r := range readChannel {
+				fmt.Println(r)
 				val, _ := json.Marshal(r.ToRestaurants())
 				// fmt.Println(string(val))
 
 				bi.Add(
 					context.Background(),
 					esutil.BulkIndexerItem{
-						Action: "index",
-						Body:   bytes.NewReader(val),
+						Action:     "index",
+						DocumentID: strconv.FormatInt(atomic.LoadInt64(&count), 10), //strconv.FormatInt(count, 10), // _id объекта (бывшей строчки из csv)
+						Body:       bytes.NewReader(val),
 						OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem, err error) {
 							if err != nil {
 								log.Printf("Ошибка записи в Elasticsearch: %v", err)
@@ -79,7 +80,7 @@ func main() {
 					},
 				)
 
-				atomic.AddInt64(&count, 1)
+				atomic.AddInt64(&count, 1) // безопасная инкрементация _id
 			}
 		}()
 	}
@@ -91,9 +92,6 @@ func main() {
 		log.Fatalf("Ошибка при закрытии BulkIndexer: %s", err)
 	}
 	stats := bi.Stats()
-	if stats.NumFailed > 0 {
-		log.Fatalf("❌ Не удалось индексировать %d документов", stats.NumFailed)
-	}
 	fmt.Printf("✅ Успешно: %d, 🛑 Ошибки: %d\n",
 		stats.NumFlushed, stats.NumFailed)
 
@@ -110,7 +108,7 @@ func main() {
 	countDocuments(es, "places")
 	readFromElastic(es)
 
-	scrollAllDocuments(es, "places")
+	// scrollAllDocuments(es, "places")
 
 }
 
@@ -221,7 +219,7 @@ func CreateElasticIndex(es *elasticsearch.Client) {
 		log.Fatalf("Ошибка при чтении schema.json: %s", err)
 	}
 
-	// Оборачиваем содержимое в структуру с "mappings"
+	// Оборачиваем содержимое schema.json в структуру с "mappings"
 	mapping := fmt.Sprintf(`{"mappings": %s}`, string(schemaFile))
 
 	res, err := es.Indices.Exists([]string{"places"})
@@ -324,28 +322,192 @@ func initBulkIndexer(es *elasticsearch.Client) esutil.BulkIndexer {
 	return bi
 }
 
-func readFromCSV(file *os.File, c chan RestaurantsCSV) {
+// func readFromCSV(file *os.File, c chan RestaurantsCSV) {
 
-	// Настройка CSV-ридера
-	gocsv.SetCSVReader(func(r io.Reader) gocsv.CSVReader {
-		reader := csv.NewReader(r)
-		reader.Comma = '\t'
-		reader.LazyQuotes = true
-		reader.FieldsPerRecord = -1
-		return reader
-	})
+// 	// Настройка CSV-ридера
+// 	gocsv.SetCSVReader(func(r io.Reader) gocsv.CSVReader {
+// 		reader := csv.NewReader(r)
+// 		reader.Comma = '\t'
+// 		reader.LazyQuotes = true
+// 		reader.FieldsPerRecord = -1
+// 		return reader
+// 	})
 
-	// Запускаем асинхронное чтение и отправку в канал
-	go func() {
+// 	// Запускаем асинхронное чтение и отправку в канал
+// 	go func() {
 
-		// Пытаемся распарсить весь файл в канал
-		err := gocsv.UnmarshalToChan(file, c)
+// 		// Пытаемся распарсить весь файл в канал
+// 		err := gocsv.UnmarshalToChan(file, c)
+// 		if err != nil {
+
+// 			fmt.Fprintf(os.Stderr, "Ошибка при чтении CSV:", err)
+// 			close(c) // закрываем канал
+// 		}
+// 	}()
+// }
+
+// func readFromCSV(file *os.File, c chan RestaurantsCSV) {
+
+// 	// Оборачиваем файл в буферизованный ридер
+// 	bufReader := bufio.NewReader(file)
+// 	// Устанавливаем кастомный CSVReader, который будет читать после заголовка
+// 	gocsv.SetCSVReader(func(_ io.Reader) gocsv.CSVReader {
+
+// 		// Создаём обычный CSV-ридер
+// 		reader := csv.NewReader(bufReader)
+// 		reader.Comma = '\t'
+// 		reader.LazyQuotes = true
+// 		reader.FieldsPerRecord = -1
+
+// 		// Пропускаем заголовок вручную
+// 		if _, err := reader.Read(); err != nil {
+// 			log.Fatalf("Ошибка при чтении заголовка CSV: %v", err)
+// 		}
+// 		// Возвращаем уже подготовленный reader с пропущенным заголовком
+
+// 		return reader
+// 	})
+
+// 	// Стартуем горутину с потоком данных в канал
+// 	go func() {
+// 		// defer close(c)
+// 		if err := gocsv.UnmarshalToChan(bufReader, c); err != nil {
+// 			log.Fatalf("Ошибка при анмаршалинге CSV: %v", err)
+// 		}
+// 	}()
+// }
+
+func parseLineToRestaurants(record []string) (Restaurants, error) {
+
+	// Парсим ID
+	id, err := strconv.ParseUint(record[0], 10, 64)
+	if err != nil {
+		log.Printf("Ошибка парсинга ID: %v", err)
+	}
+
+	// Парсим координаты
+	lat, err := strconv.ParseFloat(record[5], 64)
+	if err != nil {
+		log.Printf("Ошибка парсинга Latitude: %v", err)
+	}
+
+	lon, err := strconv.ParseFloat(record[4], 64)
+	if err != nil {
+		log.Printf("Ошибка парсинга Longitude: %v", err)
+	}
+
+	if err != nil {
+		return Restaurants{}, err
+	}
+
+	return Restaurants{
+		ID:      id,
+		Name:    record[1],
+		Address: record[2],
+		Phone:   record[3],
+		Location: Location{
+			Latitude:  lat,
+			Longitude: lon,
+		},
+	}, nil
+}
+
+func CSVToChannel(file *os.File) {
+	bufReader := bufio.NewReader(file)
+
+	reader := csv.NewReader(bufReader)
+	reader.Comma = '\t'
+	reader.LazyQuotes = true
+	reader.FieldsPerRecord = -1
+
+	// Пропускаем заголовок
+	if _, err := reader.Read(); err != nil {
+		log.Fatalf("Ошибка чтения заголовка: %v", err)
+	}
+	ch := make(chan []string, 100) // создали канал ёмкостью 100 объектов типа []string
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
+			log.Printf("Ошибка чтения строки: %v", err)
+			continue
+		}
 
-			fmt.Fprintf(os.Stderr, "Ошибка при чтении CSV:", err)
-			close(c) // закрываем канал
+		if len(record) < 6 {
+			log.Printf("Пропуск строки с недостаточным количеством полей: %+v", record)
+			continue
+		}
+		ch <- record
+	}
+
+}
+
+func readFromCSV(file *os.File, c chan RestaurantsCSV) {
+	bufReader := bufio.NewReader(file)
+
+	reader := csv.NewReader(bufReader)
+	reader.Comma = '\t'
+	reader.LazyQuotes = true
+	reader.FieldsPerRecord = -1
+
+	// Пропускаем заголовок
+	if _, err := reader.Read(); err != nil {
+		log.Fatalf("Ошибка чтения заголовка: %v", err)
+	}
+
+	go func() {
+		defer close(c)
+		for {
+			record, err := reader.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Printf("Ошибка чтения строки: %v", err)
+				continue
+			}
+
+			if len(record) < 6 {
+				log.Printf("Пропуск строки с недостаточным количеством полей: %+v", record)
+				continue
+			}
+
+			// // Парсим ID
+			// id, err := strconv.ParseUint(record[0], 10, 64)
+			// if err != nil {
+			// 	log.Printf("Ошибка парсинга ID: %v", err)
+			// 	continue
+			// }
+
+			// // Парсим координаты
+			// lat, err := strconv.ParseFloat(record[5], 64)
+			// if err != nil {
+			// 	log.Printf("Ошибка парсинга Latitude: %v", err)
+			// 	continue
+			// }
+
+			// lon, err := strconv.ParseFloat(record[4], 64)
+			// if err != nil {
+			// 	log.Printf("Ошибка парсинга Longitude: %v", err)
+			// 	continue
+			// }
+
+			// Собираем структуру
+			// c <-
+			// RestaurantsCSV{
+			// 	ID:        id,
+			// 	Name:      record[1],
+			// 	Address:   record[2],
+			// 	Phone:     record[3],
+			// 	Latitude:  lat,
+			// 	Longitude: lon,
+			// }
+
 		}
 	}()
+
 }
 
 func countDocuments(es *elasticsearch.Client, index string) {
@@ -394,6 +556,6 @@ func readFromElastic(es *elasticsearch.Client) {
 
 	// Выводим найденные рестораны
 	for _, hit := range result.Hits.Hits {
-		fmt.Printf("🍽️  %s, %s [%s]\n", hit.Source.Name, hit.Source.Address, hit.Source.Phone)
+		fmt.Printf("🍽️  %s, %s [%s], { %v, %v }\n", hit.Source.Name, hit.Source.Address, hit.Source.Phone, hit.Source.Location.Latitude, hit.Source.Location.Longitude)
 	}
 }

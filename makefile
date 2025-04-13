@@ -48,10 +48,13 @@ test_elastic:
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
 
 test_index:
-	curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places"
+	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places"
 
-test_item:
-	curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_search?scroll=1m" -H 'Content-Type: application/json' -d'{"size": 3,"query": {"match_all": {}}}'
+test_items:
+	@echo && echo ">>>> Объект  _id = 0: <<<<"
+	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/0"
+	@echo && echo && echo ">>>> Объект  _id = 13648: <<<<"
+	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/13648" && echo
 
 gomodinit:
 	go mod init $(shell basename $(PWD))
