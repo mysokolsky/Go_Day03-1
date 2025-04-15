@@ -21,7 +21,7 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esutil"
-	// "github.com/gocarina/gocsv"
+	// "github.com/gocarina/gocsv" //
 )
 
 // 5.57ms -> 600 records (read)
