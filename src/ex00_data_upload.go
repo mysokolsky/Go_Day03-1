@@ -39,17 +39,19 @@ func main() {
 
 	readChannel := make(chan RestaurantsCSV, 25) // создали канал ёмкостью 25 объектов типа RestaurantsCSV
 
-	readFilePath := "../materials/data.csv"
+	CSVFilePath := "../materials/data.csv"
 
 	// Open the CSV readFile
-	readFile, err := os.OpenFile(readFilePath, os.O_RDONLY, os.ModePerm)
+	CSVFile, err := os.OpenFile(CSVFilePath, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
-	defer readFile.Close()
+	defer CSVFile.Close()
 
 	var count int64 = 0 // количество строк
-	readFromCSV(readFile, readChannel)
+	readFromCSV(CSVFile, readChannel)
+
+	// readChannel := CSVToChannel(CSVFile)
 
 	// Воркеры читают из канала
 	var wg sync.WaitGroup
@@ -61,6 +63,9 @@ func main() {
 			for r := range readChannel {
 				fmt.Println(r)
 				val, _ := json.Marshal(r.ToRestaurants())
+				// objRestaurant, _ := parseLineToRestaurants(r)
+				// val, _ := json.Marshal(objRestaurant)
+
 				// fmt.Println(string(val))
 
 				bi.Add(
@@ -377,72 +382,83 @@ func initBulkIndexer(es *elasticsearch.Client) esutil.BulkIndexer {
 // 	}()
 // }
 
-func parseLineToRestaurants(record []string) (Restaurants, error) {
+// func parseLineToRestaurants(record []string) (Restaurants, error) {
 
-	// Парсим ID
-	id, err := strconv.ParseUint(record[0], 10, 64)
-	if err != nil {
-		log.Printf("Ошибка парсинга ID: %v", err)
-	}
+// 	// Парсим ID
+// 	id, err := strconv.ParseUint(record[0], 10, 64)
+// 	if err != nil {
+// 		log.Printf("Ошибка парсинга ID: %v", err)
+// 	}
 
-	// Парсим координаты
-	lat, err := strconv.ParseFloat(record[5], 64)
-	if err != nil {
-		log.Printf("Ошибка парсинга Latitude: %v", err)
-	}
+// 	// Парсим координаты
+// 	lat, err := strconv.ParseFloat(record[5], 64)
+// 	if err != nil {
+// 		log.Printf("Ошибка парсинга Latitude: %v", err)
+// 	}
 
-	lon, err := strconv.ParseFloat(record[4], 64)
-	if err != nil {
-		log.Printf("Ошибка парсинга Longitude: %v", err)
-	}
+// 	lon, err := strconv.ParseFloat(record[4], 64)
+// 	if err != nil {
+// 		log.Printf("Ошибка парсинга Longitude: %v", err)
+// 	}
 
-	if err != nil {
-		return Restaurants{}, err
-	}
+// 	if err != nil {
+// 		return Restaurants{}, err
+// 	}
 
-	return Restaurants{
-		ID:      id,
-		Name:    record[1],
-		Address: record[2],
-		Phone:   record[3],
-		Location: Location{
-			Latitude:  lat,
-			Longitude: lon,
-		},
-	}, nil
-}
+// 	return Restaurants{
+// 		ID:      id,
+// 		Name:    record[1],
+// 		Address: record[2],
+// 		Phone:   record[3],
+// 		Location: Location{
+// 			Latitude:  lat,
+// 			Longitude: lon,
+// 		},
+// 	}, nil
+// }
 
-func CSVToChannel(file *os.File) {
-	bufReader := bufio.NewReader(file)
+// func initCSVReader(file *os.File) *csv.Reader {
 
-	reader := csv.NewReader(bufReader)
-	reader.Comma = '\t'
-	reader.LazyQuotes = true
-	reader.FieldsPerRecord = -1
+// 	bufReader := bufio.NewReader(file)
 
-	// Пропускаем заголовок
-	if _, err := reader.Read(); err != nil {
-		log.Fatalf("Ошибка чтения заголовка: %v", err)
-	}
-	ch := make(chan []string, 100) // создали канал ёмкостью 100 объектов типа []string
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Printf("Ошибка чтения строки: %v", err)
-			continue
-		}
+// 	reader := csv.NewReader(bufReader)
+// 	reader.Comma = '\t'
+// 	reader.LazyQuotes = true
+// 	reader.FieldsPerRecord = -1
 
-		if len(record) < 6 {
-			log.Printf("Пропуск строки с недостаточным количеством полей: %+v", record)
-			continue
-		}
-		ch <- record
-	}
+// 	return reader
+// }
 
-}
+// func CSVToChannel(file *os.File) chan []string {
+
+// 	reader := initCSVReader(file)
+
+// 	// Пропускаем заголовок
+// 	if _, err := reader.Read(); err != nil {
+// 		log.Fatalf("Ошибка чтения заголовка: %v", err)
+// 	}
+// 	ch := make(chan []string, 100) // создали канал ёмкостью 100 объектов типа []string
+// 	go func() {
+// 		defer close(ch)
+// 		for {
+// 			record, err := reader.Read()
+// 			if err == io.EOF {
+// 				break
+// 			}
+// 			if err != nil {
+// 				log.Printf("Ошибка чтения строки: %v", err)
+// 				continue
+// 			}
+
+// 			if len(record) < 6 {
+// 				log.Printf("Пропуск строки с недостаточным количеством полей: %+v", record)
+// 				continue
+// 			}
+// 			ch <- record
+// 		}
+// 	}()
+// 	return ch
+// }
 
 func readFromCSV(file *os.File, c chan RestaurantsCSV) {
 	bufReader := bufio.NewReader(file)
@@ -474,36 +490,35 @@ func readFromCSV(file *os.File, c chan RestaurantsCSV) {
 				continue
 			}
 
-			// // Парсим ID
-			// id, err := strconv.ParseUint(record[0], 10, 64)
-			// if err != nil {
-			// 	log.Printf("Ошибка парсинга ID: %v", err)
-			// 	continue
-			// }
+			// Парсим ID
+			id, err := strconv.ParseUint(record[0], 10, 64)
+			if err != nil {
+				log.Printf("Ошибка парсинга ID: %v", err)
+				continue
+			}
 
-			// // Парсим координаты
-			// lat, err := strconv.ParseFloat(record[5], 64)
-			// if err != nil {
-			// 	log.Printf("Ошибка парсинга Latitude: %v", err)
-			// 	continue
-			// }
+			// Парсим координаты
+			lat, err := strconv.ParseFloat(record[5], 64)
+			if err != nil {
+				log.Printf("Ошибка парсинга Latitude: %v", err)
+				continue
+			}
 
-			// lon, err := strconv.ParseFloat(record[4], 64)
-			// if err != nil {
-			// 	log.Printf("Ошибка парсинга Longitude: %v", err)
-			// 	continue
-			// }
+			lon, err := strconv.ParseFloat(record[4], 64)
+			if err != nil {
+				log.Printf("Ошибка парсинга Longitude: %v", err)
+				continue
+			}
 
-			// Собираем структуру
-			// c <-
-			// RestaurantsCSV{
-			// 	ID:        id,
-			// 	Name:      record[1],
-			// 	Address:   record[2],
-			// 	Phone:     record[3],
-			// 	Latitude:  lat,
-			// 	Longitude: lon,
-			// }
+			//Собираем структуру
+			c <- RestaurantsCSV{
+				ID:        id,
+				Name:      record[1],
+				Address:   record[2],
+				Phone:     record[3],
+				Latitude:  lat,
+				Longitude: lon,
+			}
 
 		}
 	}()
