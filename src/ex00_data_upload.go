@@ -46,7 +46,7 @@ func main() {
 	}
 	defer CSVFile.Close()
 
-	var count uint64 = 0 // количество строк
+	var count uint64 = 0 // количество строк в CSV
 
 	// readChannel := make(chan RestaurantsCSV, 25) // создали канал ёмкостью 25 объектов типа RestaurantsCSV
 	// readFromCSV(CSVFile, readChannel)
