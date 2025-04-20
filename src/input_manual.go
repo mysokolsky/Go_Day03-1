@@ -10,30 +10,31 @@ import (
 	"strconv"
 )
 
+// тип структурного объекта с полем id из CSV файла
 type RestaurantsMANUAL struct {
-	ID uint64 `json:"id"` // для ручного парсинга
+	ID uint64 `json:"id"`
 	RestaurantsBASE
 }
 
-type InputType = []string
+type InputType = []string // тип данных для загрузки из CSV в канал-буфер
 
 type Restaurants = RestaurantsMANUAL
 
 // Чтение строк из CSV и заливка в канал-буфер
 func CSVLinesToChannel(file *os.File, ch chan InputType) {
 
-	reader := initCSVReader(file) // настраиваем ридер для правильной разбивки строк на сегменты информации для конвертации в объекты Restaurants
+	reader := initCSVReader(file) // инициализируем и настраиваем ридер для правильной разбивки строк на сегменты информации для конвертации в объекты Restaurants
 
 	// Пропускаем заголовок
 	if _, err := reader.Read(); err != nil {
 		log.Fatalf("Ошибка чтения заголовка: %v", err)
 	}
-	// ch := make(chan []string, 25) // создали канал ёмкостью 25 объектов типа []string
+
 	go func() {
 		defer close(ch)
 		for {
 			line, err := reader.Read()
-			if err == io.EOF {
+			if err == io.EOF { // читаем файл до конца и выходим
 				break
 			}
 			if err != nil {
@@ -42,13 +43,14 @@ func CSVLinesToChannel(file *os.File, ch chan InputType) {
 			}
 
 			if len(line) < 6 { // полей должно быть не менее шести: id, name, address, phone, longitude, latitude
-				log.Printf("Пропуск строки с недостаточным количеством полей: %+v", line)
+				log.Printf("\n⚠️  Пропуск строки с недостаточным количеством полей: \n%+v\n ❗ полей должно быть не менее шести: id, name, address, phone, longitude, latitude", line)
+
 				continue
+
 			}
 			ch <- line
 		}
 	}()
-	// return ch
 }
 
 // Конвертация строки в объект Restaurants при ручном парсинге
@@ -76,7 +78,7 @@ func ConvertLineToRestaurantsOBJ(line InputType) (Restaurants, error) {
 	}
 
 	return Restaurants{
-		ID: id, // для ручного парсинга
+		ID: id,
 		RestaurantsBASE: RestaurantsBASE{
 			Name:    line[1],
 			Address: line[2],
@@ -91,8 +93,8 @@ func ConvertLineToRestaurantsOBJ(line InputType) (Restaurants, error) {
 
 func GetValue(r InputType) []byte {
 
-	objRestaurant, _ := ConvertLineToRestaurantsOBJ(r) // для ручного парсинга
-	val, _ := json.Marshal(objRestaurant)              // для ручного парсинга
+	objRestaurant, _ := ConvertLineToRestaurantsOBJ(r)
+	val, _ := json.Marshal(objRestaurant)
 
 	return val
 }

@@ -34,7 +34,7 @@ func main() {
 
 	CSVFilePath := "../materials/data.csv"
 
-	// Open the CSV readFile
+	// Открываем CSV файл для чтения
 	CSVFile, err := os.OpenFile(CSVFilePath, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		panic(err)
@@ -43,9 +43,10 @@ func main() {
 
 	var count uint64 = 0 // счётчик записей(строк) в CSV
 
-	readChannel := make(chan InputType, 25) // для автоматического парсинга с использованием заголовка с помощью gocsv
+	readChannel := make(chan InputType, 25) // InputType - один из двух типов данных, прописанный в input_auto.go и input_manual.go,
+	// который подставляется при условной компиляции go run -tags=manual . или go run .
 
-	CSVLinesToChannel(CSVFile, readChannel) // для ручного парсинга без заголовка
+	CSVLinesToChannel(CSVFile, readChannel) // вызов одной из функций парсинга, в зависимости от условной компиляции
 
 	// Воркеры читают из канала
 	var wg sync.WaitGroup
@@ -54,7 +55,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			FromChannelToElastic(readChannel, bi, &count)
+			FromChannelToElastic(readChannel, bi, &count) // запуск функции заливки в Elastic
 		}()
 	}
 
@@ -65,7 +66,7 @@ func main() {
 		log.Fatalf("Ошибка при закрытии BulkIndexer: %s", err)
 	}
 
-	PrintResult(bi, es, &now, &count) // Выводим данные из Elastic
+	PrintResult(bi, es, &now, &count) // Выводим данные из Elastic в консоль
 
 }
 
@@ -149,7 +150,7 @@ func CreateElasticIndex(es *elasticsearch.Client) {
 	}
 
 	fmt.Println("✅ Индекс 'places' успешно создан!")
-	fmt.Println("Ответ от Elasticsearch:", string(body))
+	fmt.Println("Ответ от сервера Elastic:", string(body))
 
 }
 
@@ -165,13 +166,14 @@ func getElasticPassword() string {
 
 // Инициализация клиента Elastic
 func initElasticsearch() *elasticsearch.Client {
-	// Создаем клиент Elasticsearch с использованием HTTPS и аутентификации
+
+	// Создаем клиент для общения с сервером Elastic. С использованием HTTPS и аутентификации
 	es, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: []string{
-			"https://localhost:9200", // Ваш сервер Elasticsearch
+			"https://localhost:9200", // Адрес сервера и порт для общения с Elastic
 		},
 		Username: "elastic",            // Имя пользователя
-		Password: getElasticPassword(), // Ваш пароль
+		Password: getElasticPassword(), // Пароль
 
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -186,7 +188,7 @@ func initElasticsearch() *elasticsearch.Client {
 	// Проверяем соединение с сервером
 	res, err := es.Info()
 	if err != nil {
-		log.Fatalf("Ошибка при подключении к Elasticsearch: %v", err)
+		log.Fatalf("🛑 Ошибка при подключении к Elasticsearch:  \n%+v \n⚠️  Сначала запустите сервер Elastic при помощи команды 'make' в корневой папке проекта", err)
 	}
 	defer res.Body.Close()
 
@@ -197,21 +199,21 @@ func initElasticsearch() *elasticsearch.Client {
 	}
 
 	// Выводим ответ
-	fmt.Println("Ответ от сервера:", string(body))
+	log.Println("Ответ от сервера:", string(body))
 
 	return es
 }
 
-// Инициализация Bulk API индексатора
+// Инициализация и настройка Bulk API индексатора
 func initBulkIndexer(es *elasticsearch.Client) esutil.BulkIndexer {
 	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
 		Client:        es,
-		Index:         "places", // 🔁 Имя индекса
-		NumWorkers:    5,        // Кол-во воркеров
-		FlushBytes:    5e+6,     // Примерно 5MB
-		FlushInterval: 5 * time.Second,
+		Index:         "places",        // 🔁 Имя маркера для пометки заливаемых данных
+		NumWorkers:    5,               // Кол-во воркеров которые одновременно будут заливать в Elastic
+		FlushBytes:    5e+6,            // ограничиваем буфер данных для заливки в Elastic = 5 мегабайтам
+		FlushInterval: 5 * time.Second, // или по времени не более 5 секунд
 		OnFlushStart: func(ctx context.Context) context.Context {
-			log.Println("▶ Начало флаша данных...")
+			log.Println("🔁 Начало флаша данных...")
 			return ctx
 		},
 	})
@@ -222,15 +224,15 @@ func initBulkIndexer(es *elasticsearch.Client) esutil.BulkIndexer {
 	return bi
 }
 
-// Инициализация CSV-читателя
+// Инициализация и настройка CSV-читателя
 func initCSVReader(file *os.File) *csv.Reader {
 
-	bufReader := bufio.NewReader(file)
+	bufReader := bufio.NewReader(file) // создаём буфер для файла
 
-	reader := csv.NewReader(bufReader)
-	reader.Comma = '\t'
-	reader.LazyQuotes = true
-	reader.FieldsPerRecord = -1
+	reader := csv.NewReader(bufReader) // инициализируем ридер для CSV файла
+	reader.Comma = '\t'                // разделитель полей в файле CSV - табуляция
+	reader.LazyQuotes = true           // разрешаем некорректные или незакрытые кавычки в CSV
+	reader.FieldsPerRecord = -1        // определяем, что в одной записи может быть разное количество полей
 
 	return reader
 }
@@ -261,7 +263,7 @@ func PrintResult(bi esutil.BulkIndexer, es *elasticsearch.Client, now *time.Time
 
 }
 
-// Подсчёт количества залитых json-ов
+// Подсчёт в Elastic количества залитых json-ов
 func countDocuments(es *elasticsearch.Client, index string) {
 	res, err := es.Count(
 		es.Count.WithIndex(index),

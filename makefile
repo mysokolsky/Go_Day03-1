@@ -16,7 +16,7 @@ endif
 ELASTIC_RUN:=$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)
 ELASTIC_INSTALL:=$(shell dirname $(ELASTIC_PATH))/$(ELASTIC_DOWNLOAD_FILE)
 
-all: elastic
+all: elastic run_manual_parse
 
 elastic: $(ELASTIC_RUN)
 	@echo "Запускаем..."
