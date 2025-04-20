@@ -8,6 +8,8 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/esutil"
 	"io"
 	"log"
 	"net/http"
@@ -18,24 +20,17 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/elastic/go-elasticsearch/v8/esutil"
-	// "github.com/gocarina/gocsv" //
 )
 
-// 5.57ms -> 600 records (read)
 func main() {
 
-	es := initElasticsearch()
+	es := initElasticsearch() // инициализируем клиент для работы с базой Elastic
 
-	CreateElasticIndex(es)
+	CreateElasticIndex(es) // Создаём маркер для объединения объектов json в Elastic-е
 
-	// scrollAllDocuments(es, "places")
+	bi := initBulkIndexer(es) // инициализируем Bulk API для заливки json в Elastic
 
-	bi := initBulkIndexer(es)
-
-	now := time.Now()
+	now := time.Now() // засекаем время для вычисления длительности выполнения программы
 
 	CSVFilePath := "../materials/data.csv"
 
@@ -46,16 +41,15 @@ func main() {
 	}
 	defer CSVFile.Close()
 
-	var count uint64 = 0 // количество строк в CSV
+	var count uint64 = 0 // счётчик записей(строк) в CSV
 
-	// readChannel := make(chan RestaurantsCSV, 25) // создали канал ёмкостью 25 объектов типа RestaurantsCSV
-	// readFromCSV(CSVFile, readChannel)
+	readChannel := make(chan InputType, 25) // для автоматического парсинга с использованием заголовка с помощью gocsv
 
-	readChannel := CSVLinesToChannel(CSVFile)
+	CSVLinesToChannel(CSVFile, readChannel) // для ручного парсинга без заголовка
 
 	// Воркеры читают из канала
 	var wg sync.WaitGroup
-	workerCount := 5 // количество воркеров
+	workerCount := 5 // количество воркеров, которые будут одновременно параллельно заливать данные в Elastic
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
@@ -66,58 +60,28 @@ func main() {
 
 	wg.Wait()
 
-	// ⚠️ Закрываем BulkIndexer только после всех воркеров!
+	// ⚠️ Закрываем BulkIndexer только после заершения работы всех воркеров!
 	if err := bi.Close(context.Background()); err != nil {
 		log.Fatalf("Ошибка при закрытии BulkIndexer: %s", err)
 	}
 
-	PrintResult(bi, es, &now, &count)
+	PrintResult(bi, es, &now, &count) // Выводим данные из Elastic
 
 }
 
 // ОСНОВНЫЕ РАБОЧИЕ ФУНКЦИИ
-// Чтение строк из CSV и заливка в канал
-func CSVLinesToChannel(file *os.File) chan []string {
-
-	reader := initCSVReader(file)
-
-	// Пропускаем заголовок
-	if _, err := reader.Read(); err != nil {
-		log.Fatalf("Ошибка чтения заголовка: %v", err)
-	}
-	ch := make(chan []string, 25) // создали канал ёмкостью 25 объектов типа []string
-	go func() {
-		defer close(ch)
-		for {
-			record, err := reader.Read()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				log.Printf("Ошибка чтения строки: %v", err)
-				continue
-			}
-
-			if len(record) < 6 {
-				log.Printf("Пропуск строки с недостаточным количеством полей: %+v", record)
-				continue
-			}
-			ch <- record
-		}
-	}()
-	return ch
-}
 
 // Чтение из канала, конвертация в объекты Restaurants, маршалинг в json и заливка в Elastic
-func FromChannelToElastic(ch chan []string, bi esutil.BulkIndexer, count *uint64) {
+func FromChannelToElastic(
+	ch chan InputType,
+	bi esutil.BulkIndexer,
+	count *uint64) {
 
 	for r := range ch {
 		// fmt.Println(r)
 
-		// val, _ := json.Marshal(r.ToRestaurants())
+		val := GetValue(r)
 
-		objRestaurant, _ := ConvertLineToRestaurantsOBJ(r)
-		val, _ := json.Marshal(objRestaurant)
 		fmt.Println(string(val))
 
 		bi.Add(
@@ -139,42 +103,6 @@ func FromChannelToElastic(ch chan []string, bi esutil.BulkIndexer, count *uint64
 
 		atomic.AddUint64(count, 1) // безопасная инкрементация _id
 	}
-}
-
-// Конвертация строки в объект Restaurants
-func ConvertLineToRestaurantsOBJ(record []string) (Restaurants, error) {
-
-	// Парсим ID
-	id, err := strconv.ParseUint(record[0], 10, 64)
-	if err != nil {
-		log.Printf("Ошибка парсинга ID: %v", err)
-	}
-
-	// Парсим координаты
-	lat, err := strconv.ParseFloat(record[5], 64)
-	if err != nil {
-		log.Printf("Ошибка парсинга Latitude: %v", err)
-	}
-
-	lon, err := strconv.ParseFloat(record[4], 64)
-	if err != nil {
-		log.Printf("Ошибка парсинга Longitude: %v", err)
-	}
-
-	if err != nil {
-		return Restaurants{}, err
-	}
-
-	return Restaurants{
-		ID:      id,
-		Name:    record[1],
-		Address: record[2],
-		Phone:   record[3],
-		Location: Location{
-			Latitude:  lat,
-			Longitude: lon,
-		},
-	}, nil
 }
 
 // СЛУЖЕБНЫЕ ФУНКЦИИ для подключения Elastic и других важных модулей
@@ -484,34 +412,3 @@ func scrollAllDocuments(es *elasticsearch.Client, index string) {
 
 	fmt.Printf("Выведено документов: %d\n", count)
 }
-
-// func readFromCSV(file *os.File, c chan RestaurantsCSV) {
-
-// 	// Оборачиваем файл в буферизованный ридер
-// 	bufReader := bufio.NewReader(file)
-// 	// Устанавливаем кастомный CSVReader, который будет читать после заголовка
-// 	gocsv.SetCSVReader(func(_ io.Reader) gocsv.CSVReader {
-
-// 		// Создаём обычный CSV-ридер
-// 		reader := csv.NewReader(bufReader)
-// 		reader.Comma = '\t'
-// 		reader.LazyQuotes = true
-// 		reader.FieldsPerRecord = -1
-
-// 		// Пропускаем заголовок вручную
-// 		if _, err := reader.Read(); err != nil {
-// 			log.Fatalf("Ошибка при чтении заголовка CSV: %v", err)
-// 		}
-// 		// Возвращаем уже подготовленный reader с пропущенным заголовком
-
-// 		return reader
-// 	})
-
-// 	// Стартуем горутину с потоком данных в канал
-// 	go func() {
-// 		// defer close(c)
-// 		if err := gocsv.UnmarshalToChan(bufReader, c); err != nil {
-// 			log.Fatalf("Ошибка при анмаршалинге CSV: %v", err)
-// 		}
-// 	}()
-// }

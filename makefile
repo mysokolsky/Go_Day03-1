@@ -16,9 +16,9 @@ endif
 ELASTIC_RUN:=$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)
 ELASTIC_INSTALL:=$(shell dirname $(ELASTIC_PATH))/$(ELASTIC_DOWNLOAD_FILE)
 
-all: run
+all: elastic
 
-run: $(ELASTIC_RUN)
+elastic: $(ELASTIC_RUN)
 	@echo "Запускаем..."
 ifeq ($(OS), Darwin)
 	@osascript -e 'tell application "Terminal" to do script  "$(ELASTIC_RUN)"'
@@ -55,6 +55,12 @@ test_items:
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/0"
 	@echo && echo && echo ">>>> Объект  _id = 13648: <<<<"
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/13648" && echo
+
+run_manual_parse:
+	@cd src && go run -tags=manual .
+
+run_auto_parse:
+	@cd src && go run .
 
 gomodinit:
 	go mod init $(shell basename $(PWD))
