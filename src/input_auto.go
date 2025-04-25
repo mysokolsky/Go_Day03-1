@@ -3,7 +3,7 @@
 package main
 
 import (
-	"bufio"
+	// "bufio"
 	"encoding/json"
 	"io"
 	"log"
@@ -41,18 +41,18 @@ func (r RestaurantsCSV) ToRestaurants() Restaurants {
 // функция читает данные из CSV файла и записывает в канал. Принимает на вход файл и канал типа RestaurantsCSV
 func CSVLinesToChannel(file *os.File, c chan InputType) {
 
+	// Создаём буфер для файла, хотя это не обязательно
+	// bufReader := bufio.NewReader(file)
+
 	// Устанавливаем кастомный CSVReader, который будет читать после заголовка
 	gocsv.SetCSVReader(func(_ io.Reader) gocsv.CSVReader {
 		return initCSVReader(file) // вызов инициализатора для CSV-reader-а
 	})
 
-	// Создаём буфер для файла, хотя это не обязательно
-	bufReader := bufio.NewReader(file)
-
 	// Стартуем горутину с потоком данных в канал
 	go func() {
 		// defer close(c) // в данном случае канал закрывать не надо, так как он автоматически закрывается gocsv
-		if err := gocsv.UnmarshalToChan(bufReader, c); err != nil {
+		if err := gocsv.UnmarshalToChan(file, c); err != nil {
 			log.Fatalf("Ошибка при анмаршалинге CSV: %v", err)
 		}
 	}()

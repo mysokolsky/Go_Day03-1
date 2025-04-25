@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	// "bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -37,13 +37,13 @@ func main() {
 	// Открываем CSV файл для чтения
 	CSVFile, err := os.OpenFile(CSVFilePath, os.O_RDONLY, os.ModePerm)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Ошибка при открытии файла CSV: %s", err)
 	}
 	defer CSVFile.Close()
 
 	var count uint64 = 0 // счётчик записей(строк) в CSV
 
-	readChannel := make(chan InputType, 25) // InputType - один из двух типов данных, прописанный в input_auto.go и input_manual.go,
+	readChannel := make(chan InputType, 10) // Открываем канал на 25 записей. InputType - один из двух типов данных, прописанный в input_auto.go и input_manual.go,
 	// который подставляется при условной компиляции go run -tags=manual . или go run .
 
 	CSVLinesToChannel(CSVFile, readChannel) // вызов одной из функций парсинга, в зависимости от условной компиляции
@@ -122,7 +122,7 @@ func CreateElasticIndex(es *elasticsearch.Client) {
 
 	res, err := es.Indices.Exists([]string{"places"})
 	if err != nil {
-		log.Fatalf("Ошибка при проверке индекса: %s", err)
+		log.Fatalf("Ошибка при проверке наличия индекса 'places': %s", err)
 	}
 	defer res.Body.Close()
 
@@ -141,7 +141,7 @@ func CreateElasticIndex(es *elasticsearch.Client) {
 	// Читаем тело ответа
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Fatalf("Ошибка чтения ответа: %s", err)
+		log.Fatalf("Ошибка чтения ответа от сервера после создания индекса: %s", err)
 	}
 
 	// Проверяем код ответа
@@ -211,10 +211,16 @@ func initBulkIndexer(es *elasticsearch.Client) esutil.BulkIndexer {
 		Index:         "places",        // 🔁 Имя маркера для пометки заливаемых данных
 		NumWorkers:    5,               // Кол-во воркеров которые одновременно будут заливать в Elastic
 		FlushBytes:    5e+6,            // ограничиваем буфер данных для заливки в Elastic = 5 мегабайтам
-		FlushInterval: 5 * time.Second, // или по времени не более 5 секунд
+		FlushInterval: 1 * time.Second, // или по времени не более 5 секунд
 		OnFlushStart: func(ctx context.Context) context.Context {
 			log.Println("🔁 Начало флаша данных...")
 			return ctx
+		},
+		OnFlushEnd: func(ctx context.Context) {
+			log.Println("✅ Флаш завершён")
+		},
+		OnError: func(ctx context.Context, err error) {
+			log.Printf("❌ Ошибка при флаше: %s", err)
 		},
 	})
 	if err != nil {
@@ -225,14 +231,14 @@ func initBulkIndexer(es *elasticsearch.Client) esutil.BulkIndexer {
 }
 
 // Инициализация и настройка CSV-читателя
-func initCSVReader(file *os.File) *csv.Reader {
+func initCSVReader( file *os.File) *csv.Reader {
 
-	bufReader := bufio.NewReader(file) // создаём буфер для файла
+	// bufReader := bufio.NewReader(file) // создаём буфер для файла
 
-	reader := csv.NewReader(bufReader) // инициализируем ридер для CSV файла
-	reader.Comma = '\t'                // разделитель полей в файле CSV - табуляция
-	reader.LazyQuotes = true           // разрешаем некорректные или незакрытые кавычки в CSV
-	reader.FieldsPerRecord = -1        // определяем, что в одной записи может быть разное количество полей
+	reader := csv.NewReader(file)  // инициализируем ридер для CSV файла
+	reader.Comma = '\t'         // разделитель полей в файле CSV - табуляция
+	reader.LazyQuotes = true    // разрешаем некорректные или незакрытые кавычки в CSV
+	reader.FieldsPerRecord = -1 // определяем, что в одной записи может быть разное количество полей
 
 	return reader
 }
@@ -315,102 +321,102 @@ func readFromElastic(es *elasticsearch.Client) {
 	}
 }
 
-// Печать всех залитых json в консоль
-func scrollAllDocuments(es *elasticsearch.Client, index string) {
-	// Начинаем запрос с указанием scroll параметра
-	pageSize := 100 // сколько документов на странице (можно настроить)
-	query := `{"query": {"match_all": {}}}`
+// // Печать всех залитых json в консоль
+// func scrollAllDocuments(es *elasticsearch.Client, index string) {
+// 	// Начинаем запрос с указанием scroll параметра
+// 	pageSize := 100 // сколько документов на странице (можно настроить)
+// 	query := `{"query": {"match_all": {}}}`
 
-	// Выполняем начальный запрос
-	res, err := es.Search(
-		es.Search.WithIndex(index),
-		es.Search.WithScroll(time.Minute),
-		es.Search.WithSize(pageSize),
-		es.Search.WithBody(strings.NewReader(query)),
-	)
-	if err != nil {
-		log.Fatalf("Ошибка при начальном поиске: %s", err)
-	}
-	defer res.Body.Close()
+// 	// Выполняем начальный запрос
+// 	res, err := es.Search(
+// 		es.Search.WithIndex(index),
+// 		es.Search.WithScroll(time.Minute),
+// 		es.Search.WithSize(pageSize),
+// 		es.Search.WithBody(strings.NewReader(query)),
+// 	)
+// 	if err != nil {
+// 		log.Fatalf("Ошибка при начальном поиске: %s", err)
+// 	}
+// 	defer res.Body.Close()
 
-	if res.IsError() {
-		log.Fatalf("Ошибка ответа при начальном поиске: %s", res.String())
-	}
+// 	if res.IsError() {
+// 		log.Fatalf("Ошибка ответа при начальном поиске: %s", res.String())
+// 	}
 
-	var result map[string]interface{}
-	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
-		log.Fatalf("Ошибка декодирования ответа: %s", err)
-	}
+// 	var result map[string]interface{}
+// 	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
+// 		log.Fatalf("Ошибка декодирования ответа: %s", err)
+// 	}
 
-	scrollID, ok := result["_scroll_id"].(string)
-	if !ok {
-		log.Fatalf("Не удалось получить _scroll_id")
-	}
+// 	scrollID, ok := result["_scroll_id"].(string)
+// 	if !ok {
+// 		log.Fatalf("Не удалось получить _scroll_id")
+// 	}
 
-	hits := result["hits"].(map[string]interface{})["hits"].([]interface{})
-	totalDocuments := int(result["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64))
-	fmt.Printf("Всего документов: %d\n", totalDocuments)
+// 	hits := result["hits"].(map[string]interface{})["hits"].([]interface{})
+// 	totalDocuments := int(result["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64))
+// 	fmt.Printf("Всего документов: %d\n", totalDocuments)
 
-	// Выводим первые полученные документы
-	for _, hit := range hits {
-		doc := hit.(map[string]interface{})["_source"]
-		docJSON, _ := json.MarshalIndent(doc, "", "  ")
-		fmt.Println(string(docJSON))
-	}
+// 	// Выводим первые полученные документы
+// 	for _, hit := range hits {
+// 		doc := hit.(map[string]interface{})["_source"]
+// 		docJSON, _ := json.MarshalIndent(doc, "", "  ")
+// 		fmt.Println(string(docJSON))
+// 	}
 
-	// Считаем уже выведенные документы
-	count := len(hits)
+// 	// Считаем уже выведенные документы
+// 	count := len(hits)
 
-	// Продолжаем извлекать следующие страницы, пока не будет получено 0 документов
-	for {
-		// Формируем запрос scroll
-		res, err := es.Scroll(
-			es.Scroll.WithScrollID(scrollID),
-			es.Scroll.WithScroll(time.Minute),
-		)
-		if err != nil {
-			log.Fatalf("Ошибка при scroll запросе: %s", err)
-		}
-		defer res.Body.Close()
+// 	// Продолжаем извлекать следующие страницы, пока не будет получено 0 документов
+// 	for {
+// 		// Формируем запрос scroll
+// 		res, err := es.Scroll(
+// 			es.Scroll.WithScrollID(scrollID),
+// 			es.Scroll.WithScroll(time.Minute),
+// 		)
+// 		if err != nil {
+// 			log.Fatalf("Ошибка при scroll запросе: %s", err)
+// 		}
+// 		defer res.Body.Close()
 
-		if res.IsError() {
-			log.Fatalf("Ошибка ответа scroll запроса: %s", res.String())
-		}
+// 		if res.IsError() {
+// 			log.Fatalf("Ошибка ответа scroll запроса: %s", res.String())
+// 		}
 
-		var scrollResult map[string]interface{}
-		if err := json.NewDecoder(res.Body).Decode(&scrollResult); err != nil {
-			log.Fatalf("Ошибка декодирования scroll ответа: %s", err)
-		}
+// 		var scrollResult map[string]interface{}
+// 		if err := json.NewDecoder(res.Body).Decode(&scrollResult); err != nil {
+// 			log.Fatalf("Ошибка декодирования scroll ответа: %s", err)
+// 		}
 
-		// Обновляем scrollID
-		scrollID, ok = scrollResult["_scroll_id"].(string)
-		if !ok {
-			log.Fatalf("Не удалось обновить _scroll_id")
-		}
+// 		// Обновляем scrollID
+// 		scrollID, ok = scrollResult["_scroll_id"].(string)
+// 		if !ok {
+// 			log.Fatalf("Не удалось обновить _scroll_id")
+// 		}
 
-		// Получаем hits
-		hitsPage := scrollResult["hits"].(map[string]interface{})["hits"].([]interface{})
-		if len(hitsPage) == 0 {
-			break // если страниц больше нет, выходим
-		}
+// 		// Получаем hits
+// 		hitsPage := scrollResult["hits"].(map[string]interface{})["hits"].([]interface{})
+// 		if len(hitsPage) == 0 {
+// 			break // если страниц больше нет, выходим
+// 		}
 
-		// Выводим каждый документ
-		for _, hit := range hitsPage {
-			doc := hit.(map[string]interface{})["_source"]
-			docJSON, _ := json.MarshalIndent(doc, "", "  ")
-			fmt.Println(string(docJSON))
-		}
+// 		// Выводим каждый документ
+// 		for _, hit := range hitsPage {
+// 			doc := hit.(map[string]interface{})["_source"]
+// 			docJSON, _ := json.MarshalIndent(doc, "", "  ")
+// 			fmt.Println(string(docJSON))
+// 		}
 
-		count += len(hitsPage)
-	}
+// 		count += len(hitsPage)
+// 	}
 
-	// Очищаем scroll-контекст
-	_, err = es.ClearScroll(
-		es.ClearScroll.WithScrollID(scrollID),
-	)
-	if err != nil {
-		log.Printf("Ошибка при очистке scroll: %s", err)
-	}
+// 	// Очищаем scroll-контекст
+// 	_, err = es.ClearScroll(
+// 		es.ClearScroll.WithScrollID(scrollID),
+// 	)
+// 	if err != nil {
+// 		log.Printf("Ошибка при очистке scroll: %s", err)
+// 	}
 
-	fmt.Printf("Выведено документов: %d\n", count)
-}
+// 	fmt.Printf("Выведено документов: %d\n", count)
+// }

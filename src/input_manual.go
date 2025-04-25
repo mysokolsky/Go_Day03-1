@@ -23,6 +23,7 @@ type Restaurants = RestaurantsMANUAL
 // Чтение строк из CSV и заливка в канал-буфер
 func CSVLinesToChannel(file *os.File, ch chan InputType) {
 
+	// bufReader := bufio.NewReader(file)
 	reader := initCSVReader(file) // инициализируем и настраиваем ридер для правильной разбивки строк на сегменты информации для конвертации в объекты Restaurants
 
 	// Пропускаем заголовок

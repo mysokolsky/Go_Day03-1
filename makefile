@@ -6,7 +6,7 @@ ELASTIC_PASS_RESET_ADDON:=-reset-password -u elastic -b --url "https://localhost
 ifeq ($(OS), Darwin)
 	PASSWORD_FILE:=elastic_pass_MAC.txt
 	ELASTIC_PATH:=$(shell cat elastic_dir_MAC.txt)
-	ELASTIC_DOWNLOAD_URL:=https://downloader.disk.yandex.ru/disk/b22dec595f91c451745f7e1f8dca95d5029353de6fa53f9ec4ebdc2ca51bc7df/67f6f169/fKqInKw3d7bLFOeFnMGnhNoBog5PxpbChttBBDC3x3UsD4eAa5YILQcvwb2Ms_j8vtAD8IWpYqSgCCXV75S9g9-mtHtQbq1XFrfoMIHCY3Sr8npumZHI4midPdWhecNq?uid=0&filename=elasticsearch-8.4.2-darwin-x86_64.tar.gz&disposition=attachment&hash=xhdH749L3BMuzoZV8bO6PHdqqp8rWmRmo0pFHuv781sNePa3sfRUD8Sh%2BPb7xhJeskEAmkQ4kXOg0TR8ZsXayQ%3D%3D&limit=0&content_type=application%2Fx-gzip&owner_uid=1130000030982078&fsize=379332642&hid=ecb9826972a8625a38039a6a50f6e649&media_type=compressed&tknv=v2
+	ELASTIC_DOWNLOAD_URL:=https://disk.yandex.ru/d/cy8KaNjG3u1p_w
 	ELASTIC_DOWNLOAD_FILE:=elasticsearch-8.4.2-darwin-x86_64.tar.gz
 else
 	PASSWORD_FILE:=elastic_pass_WSL.txt
@@ -16,7 +16,10 @@ endif
 ELASTIC_RUN:=$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)
 ELASTIC_INSTALL:=$(shell dirname $(ELASTIC_PATH))/$(ELASTIC_DOWNLOAD_FILE)
 
-all: elastic run_manual_parse
+all: run_manual_parse
+
+cleangocache:
+	@go clean -cache -modcache -testcache && echo "\nОчистка кеша завершена успешно!\n"
 
 elastic: $(ELASTIC_RUN)
 	@echo "Запускаем..."
@@ -57,10 +60,10 @@ test_items:
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/13648" && echo
 
 run_manual_parse:
-	@cd src && go run -tags=manual .
+	cd src && go run -tags=manual .
 
 run_auto_parse:
-	@cd src && go run .
+	cd src && go run .
 
 gomodinit:
 	go mod init $(shell basename $(PWD))
