@@ -65,10 +65,15 @@ test_items: elastic
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/13648" && echo
 
 run_manual_parse: elastic
-	cd src && go run -tags=manual .
+	@echo "Запуск ручного парсинга..."
+	@sleep 2
+	@cd src && go run -tags=manual .
 
 run_auto_parse: elastic
-	cd src && go run .
+	@echo "Запуск автоматического парсинга с помощью библиотеки gocsv..."
+	@sleep 2
+	@cd src && go run .
+
 
 gomodinit:
 	go mod init $(shell basename $(PWD))
