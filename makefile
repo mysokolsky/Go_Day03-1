@@ -16,20 +16,25 @@ endif
 ELASTIC_RUN:=$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)
 ELASTIC_INSTALL:=$(shell dirname $(ELASTIC_PATH))/$(ELASTIC_DOWNLOAD_FILE)
 
-all: run_manual_parse
+all: elastic run_manual_parse
 
 cleangocache:
 	@go clean -cache -modcache -testcache && echo "\nОчистка кеша завершена успешно!\n"
 
 elastic: $(ELASTIC_RUN)
-	@echo "Запускаем..."
-ifeq ($(OS), Darwin)
-	@osascript -e 'tell application "Terminal" to do script  "$(ELASTIC_RUN)"'
-else
-	@cmd.exe /c start wsl bash -c '$(ELASTIC_RUN); exec bash'
-endif
-	@sleep 5 && while ! curl -s -k "https://127.0.0.1:9200" >/dev/null; do sleep 2; done
-	@$(MAKE) --no-print-directory change_password
+	@curl -s -k "https://127.0.0.1:9200" >/dev/null 2>&1 && \
+		echo "Elasticsearch уже запущен!" || \
+		( \
+			echo "Запускаем..."; \
+			$(if $(filter $(OS),Darwin), \
+				osascript -e 'tell application "Terminal" to do script "$(ELASTIC_RUN)"', \
+				cmd.exe /c start wsl bash -c '$(ELASTIC_RUN); exec bash' \
+			); \
+			sleep 5; \
+			while ! curl -s -k "https://127.0.0.1:9200" >/dev/null 2>&1; do sleep 2; done; \
+			$(MAKE) --no-print-directory change_password; \
+			echo "Elastic запущен!"; \
+		)
 
 $(ELASTIC_RUN):
 	@echo "Файл не найден..."
@@ -47,22 +52,22 @@ extract:
 change_password:
 	@$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)$(ELASTIC_PASS_RESET_ADDON) | tail -n 1 | awk '{print $$NF}' | tr -d '\n' > $(PASSWORD_FILE)
 
-test_elastic:
+test_elastic: elastic
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
 
-test_index:
+test_index: elastic
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places"
 
-test_items:
+test_items: elastic
 	@echo && echo ">>>> Объект  _id = 0: <<<<"
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/0"
 	@echo && echo && echo ">>>> Объект  _id = 13648: <<<<"
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/13648" && echo
 
-run_manual_parse:
+run_manual_parse: elastic
 	cd src && go run -tags=manual .
 
-run_auto_parse:
+run_auto_parse: elastic
 	cd src && go run .
 
 gomodinit:
