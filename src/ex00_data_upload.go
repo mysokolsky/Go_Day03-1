@@ -43,7 +43,7 @@ func main() {
 
 	var count uint64 = 0 // счётчик записей(строк) в CSV
 
-	readChannel := make(chan InputType, 10) // Открываем канал на 25 записей. InputType - один из двух типов данных, прописанный в input_auto.go и input_manual.go,
+	readChannel := make(chan InputType, 25) // Открываем канал на 25 записей. InputType - один из двух типов данных, прописанный в input_auto.go и input_manual.go,
 	// который подставляется при условной компиляции go run -tags=manual . или go run .
 
 	CSVLinesToChannel(CSVFile, readChannel) // вызов одной из функций парсинга, в зависимости от условной компиляции
@@ -231,14 +231,14 @@ func initBulkIndexer(es *elasticsearch.Client) esutil.BulkIndexer {
 }
 
 // Инициализация и настройка CSV-читателя
-func initCSVReader( file *os.File) *csv.Reader {
+func initCSVReader(file *os.File) *csv.Reader {
 
 	// bufReader := bufio.NewReader(file) // создаём буфер для файла
 
-	reader := csv.NewReader(file)  // инициализируем ридер для CSV файла
-	reader.Comma = '\t'         // разделитель полей в файле CSV - табуляция
-	reader.LazyQuotes = true    // разрешаем некорректные или незакрытые кавычки в CSV
-	reader.FieldsPerRecord = -1 // определяем, что в одной записи может быть разное количество полей
+	reader := csv.NewReader(file) // инициализируем ридер для CSV файла
+	reader.Comma = '\t'           // разделитель полей в файле CSV - табуляция
+	reader.LazyQuotes = true      // разрешаем некорректные или незакрытые кавычки в CSV
+	reader.FieldsPerRecord = -1   // определяем, что в одной записи может быть разное количество полей
 
 	return reader
 }
