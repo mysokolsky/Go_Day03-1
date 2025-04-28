@@ -1,3 +1,8 @@
+# Программа рассчитана на автоматический запуск на школьном маке или на wsl
+# Просто набери make
+# Программа автоматически установит Elastic в директорию /opt/goinfre/имя_пользователя/elasticsearch-номер_версии
+# Если программа не запустится и будет ругаться на неподходящий пароль, просто сформируй новый пароль командой make change_password
+
 OS:=$(shell uname -s)
 
 LOCAL_PATH_ELASTIC:=/bin/elasticsearch
@@ -5,9 +10,10 @@ ELASTIC_PASS_RESET_ADDON:=-reset-password -u elastic -b --url "https://localhost
 
 ifeq ($(OS), Darwin)
 	PASSWORD_FILE:=elastic_pass_MAC.txt
-	ELASTIC_PATH:=$(shell cat elastic_dir_MAC.txt)
 	ELASTIC_DOWNLOAD_URL:=https://disk.yandex.ru/d/cy8KaNjG3u1p_w
 	ELASTIC_DOWNLOAD_FILE:=elasticsearch-8.4.2-darwin-x86_64.tar.gz
+	ELASTIC_NAME_DIR:=$(shell echo $(ELASTIC_DOWNLOAD_FILE) | sed -E 's/^([a-zA-Z0-9._]+-[0-9]+\.[0-9]+\.[0-9]+).*$$/\1/')
+	ELASTIC_PATH:=/opt/goinfre/$(shell whoami)/$(ELASTIC_NAME_DIR)
 else
 	PASSWORD_FILE:=elastic_pass_WSL.txt
 	ELASTIC_PATH:=$(shell cat elastic_dir_WSL.txt)
@@ -15,6 +21,7 @@ endif
 
 ELASTIC_RUN:=$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)
 ELASTIC_INSTALL:=$(shell dirname $(ELASTIC_PATH))/$(ELASTIC_DOWNLOAD_FILE)
+ELASTIC_LOGIN_PASS:=curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))"
 
 all: elastic run_manual_parse
 
@@ -56,16 +63,16 @@ change_password:
 	@$(ELASTIC_RUN)$(ELASTIC_PASS_RESET_ADDON) | tail -n 1 | awk '{print $$NF}' | tr -d '\n' > $(PASSWORD_FILE)
 
 test_elastic: elastic
-	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
+	@$(ELASTIC_LOGIN_PASS) "https://localhost:9200/"
 
 test_index: elastic
-	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places"
+	@$(ELASTIC_LOGIN_PASS) "https://localhost:9200/places"
 
 test_items: elastic
 	@echo && echo ">>>> Объект  _id = 0: <<<<"
-	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/0"
+	@$(ELASTIC_LOGIN_PASS) "https://localhost:9200/places/_doc/0"
 	@echo && echo && echo ">>>> Объект  _id = 13648: <<<<"
-	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/places/_doc/13648" && echo
+	@$(ELASTIC_LOGIN_PASS) "https://localhost:9200/places/_doc/13648" && echo
 
 run_manual_parse: elastic
 	@echo "Запуск ручного парсинга..."
