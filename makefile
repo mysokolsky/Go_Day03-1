@@ -25,7 +25,7 @@ elastic: $(ELASTIC_RUN)
 	@curl -s -k "https://127.0.0.1:9200" >/dev/null 2>&1 && \
 		echo "Elasticsearch уже запущен!" || \
 		( \
-			echo "Запускаем..."; \
+			echo "Запускаем Elastic..."; \
 			$(if $(filter $(OS),Darwin), \
 				osascript -e 'tell application "Terminal" to do script "$(ELASTIC_RUN)"', \
 				cmd.exe /c start wsl bash -c '$(ELASTIC_RUN); exec bash' \
@@ -37,20 +37,23 @@ elastic: $(ELASTIC_RUN)
 		)
 
 $(ELASTIC_RUN):
-	@echo "Файл не найден..."
-	$(MAKE) download
-	$(MAKE) extract
+	@echo "Файл Elastic не найден..."
+	@$(MAKE) download
+	@$(MAKE) extract
 
 download:
 	@echo "Скачиваем архив..."
-	curl -L -o $(ELASTIC_INSTALL) $(ELASTIC_DOWNLOAD_URL)
+	@curl -s 'https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=$(ELASTIC_DOWNLOAD_URL)' \
+	| grep -o '"href":"[^"]*' \
+	| grep -o 'https[^"]*' \
+	| xargs curl -L -o $(ELASTIC_INSTALL)
 
 extract:
 	@echo "Распаковываем архив..."
-	tar -xzf $(ELASTIC_INSTALL) -C $(shell dirname $(ELASTIC_PATH))
+	@tar -xzf $(ELASTIC_INSTALL) -C $(shell dirname $(ELASTIC_PATH))
 
 change_password:
-	@$(ELASTIC_PATH)$(LOCAL_PATH_ELASTIC)$(ELASTIC_PASS_RESET_ADDON) | tail -n 1 | awk '{print $$NF}' | tr -d '\n' > $(PASSWORD_FILE)
+	@$(ELASTIC_RUN)$(ELASTIC_PASS_RESET_ADDON) | tail -n 1 | awk '{print $$NF}' | tr -d '\n' > $(PASSWORD_FILE)
 
 test_elastic: elastic
 	@curl -XGET -k -u "elastic:$$(cat $(PASSWORD_FILE))" "https://localhost:9200/"
