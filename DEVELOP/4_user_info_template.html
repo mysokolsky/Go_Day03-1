@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Информация о пользователе</title>
+</head>
+<body>
+    <h1>{{ .Name }}</h1>
+    <p>Возраст: {{ .Age }}</p>
+    <h3>Интересы:</h3>
+    <ul>
+        {{ range .Interests }}
+            <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+</body>
+</html>

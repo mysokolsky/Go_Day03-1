@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Список задач</title>
+</head>
+<body>
+    <h2>Ваши задачи:</h2>
+    <ul>
+        {{ range . }}
+            <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+</body>
+</html>
