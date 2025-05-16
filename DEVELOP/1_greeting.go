@@ -7,11 +7,11 @@
 package main
 
 import (
-    "html/template"
-    "os"
+	"html/template"
+	"os"
 )
 
 func main() {
-    tmpl := template.Must(template.ParseFiles("1_greeting_template.html"))
-    tmpl.Execute(os.Stdout, "Парняга!")
+	tmpl := template.Must(template.ParseFiles("1_greeting_template.html"))
+	tmpl.Execute(os.Stdout, "Парняга!")
 }

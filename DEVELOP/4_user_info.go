@@ -5,26 +5,24 @@
 
 // Заполни данные и передай их в шаблон.
 
-
 package main
 
 import (
-	"os"
 	"html/template"
+	"os"
 )
 
 type User struct {
-	Name string
-	Age uint
+	Name      string
+	Age       uint
 	Interests []string
 }
 
-
 func main() {
 
-	user := User {
-		Name: "Arnold",
-		Age: 12,
+	user := User{
+		Name:      "Arnold",
+		Age:       12,
 		Interests: []string{"футбол", "шахматы", "помощь старикам"},
 	}
 

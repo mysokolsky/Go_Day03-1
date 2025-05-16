@@ -6,13 +6,13 @@
 package main
 
 import (
-	"os"
 	"html/template"
+	"os"
 )
 
 func main() {
 
 	tmpl := template.Must(template.ParseFiles("3_if_else_template.html"))
-    tmpl.Execute(os.Stdout, false)
+	tmpl.Execute(os.Stdout, false)
 
 }
