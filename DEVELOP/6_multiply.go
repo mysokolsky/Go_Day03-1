@@ -1,0 +1,33 @@
+// Используя шаблон, сгенерируй таблицу умножения для чисел от 1 до 10:
+
+// Создай вложенные слайсы для таблицы.
+// Передай их в шаблон.
+
+package main
+
+import (
+	// "fmt"
+	"html/template"
+	// "os"
+	"net/http"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	var arr = [10][10]int{}
+	for i := 1; i <= 10; i++ {
+		for j := 1; j <= 10; j++ {
+			arr[i-1][j-1] = i * j
+		}
+	}
+
+	tmpl := template.Must(template.ParseFiles("6_multiply_template.html"))
+	tmpl.Execute(w, arr)
+}
+
+func main() {
+
+	http.HandleFunc("/", handler)     // маршрут по корню "/"
+	http.ListenAndServe(":8080", nil) // запускаем сервер на 8080 порту
+	// открываем браузер и вводим адрес http://localhost:8080/
+
+}

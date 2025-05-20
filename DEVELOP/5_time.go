@@ -19,25 +19,31 @@ func formatDate(t time.Time) string {
 	return t.Format("02-01-2006 15:04")
 }
 
-
 func main() {
+
+	key := "date"
+	value := formatDate
+
+	funcMap := template.FuncMap{key: value} // инициализируем объект спецмапу шаблонов для записи в неё функциий и сразу инициализируем в ней запись алиаса date который ссылается на функцию formatDate
+
 	// Создаём новый шаблон
 	tmpl := template.New("новый шаблон")
 
-	funcMap := template.FuncMap{} // инициализируем пустую мапу
-	funcMap["date"] = formatDate
-
+	// подключаем мапу к шаблону
 	tmpl = tmpl.Funcs(funcMap)
 
-	// Отдельно парсим файл шаблона (возвращает новый шаблон)
+	// // Можно было сократить все предыдущие строки до одной строки
+	// tmpl := template.New("новый шаблон").Funcs(map[string]interface{}{"date": formatDate}) // сразу создаём шаблон и инициализируем в него алиас date, который соотвествует вызову функции формата даты
+
+	// Отдельно парсим файл шаблона (при этом создаётся подшаблон к имеющемуся)
 	var err error
-	tmpl, err = tmpl.ParseFiles("5_time_template.html") // здесь создаётся новый подшаблон "5_time_template.html", который является ребёнком для первоначального "новый шаблон"
+	tmpl, err = tmpl.ParseFiles("5_time_template.html") // здесь создаётся новый подшаблон "5_time_template.html", который является наследником для "новый шаблон"
 	if err != nil {
 		fmt.Println("Ошибка при парсинге файла:", err)
 		return
 	}
 
-	// Выполняем шаблон с текущим временем, указывая имя шаблона из файла
+	// Выполняем шаблон "5_time_template.html", передавая в качестве аргумента для алиаса date текущее время
 	err = tmpl.ExecuteTemplate(os.Stdout, "5_time_template.html", time.Now())
 	if err != nil {
 		fmt.Println("Ошибка при выполнении шаблона:", err)
@@ -48,4 +54,8 @@ func main() {
 	for _, t := range tmpl.Templates() {
 		fmt.Println(t.Name())
 	}
+
+	// // Можно сделать вообще всё одной строчкой вот так:
+	// template.Must(template.New("новый шаблон").Funcs(map[string]interface{}{"date": formatDate}).ParseFiles("5_time_template.html")).ExecuteTemplate(os.Stdout, "5_time_template.html", time.Now())
+
 }

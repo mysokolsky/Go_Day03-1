@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Таблица умножения</title>
+    <style>
+        table { border-collapse: collapse; }
+        td { border: 1px solid black; padding: 5px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>Таблица умножения</h1>
+    <table>
+        {{range .}}
+        <tr>
+            {{range .}}
+            <td>{{.}}</td>
+            {{end}}
+        </tr>
+        {{end}}
+    </table>
+</body>
+</html>
