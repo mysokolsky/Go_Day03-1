@@ -6,12 +6,11 @@
 package main
 
 import (
-	// "fmt"
 	"html/template"
-	// "os"
 	"net/http"
 )
 
+// обработчик http-запроса
 func handler(w http.ResponseWriter, r *http.Request) {
 	var arr = [10][10]int{}
 	for i := 1; i <= 10; i++ {
@@ -26,7 +25,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	http.HandleFunc("/", handler)     // маршрут по корню "/"
+	http.HandleFunc("/", handler)     // вызов обработчика при маршруте по корню "/"
 	http.ListenAndServe(":8080", nil) // запускаем сервер на 8080 порту
 	// открываем браузер и вводим адрес http://localhost:8080/
 
