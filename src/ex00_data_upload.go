@@ -2,6 +2,7 @@ package main
 
 import (
 	// "bufio"
+	"Go_Day03-1/src/types"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -43,7 +44,7 @@ func main() {
 
 	var count uint64 = 0 // счётчик записей(строк) в CSV
 
-	readChannel := make(chan InputType, 25) // Открываем канал на 25 записей. InputType - один из двух типов данных, прописанный в input_auto.go и input_manual.go,
+	readChannel := make(chan types.InputType, 25) // Открываем канал на 25 записей. InputType - один из двух типов данных, прописанный в input_auto.go и input_manual.go,
 	// который подставляется при условной компиляции go run -tags=manual . или go run .
 
 	CSVLinesToChannel(CSVFile, readChannel) // вызов одной из функций парсинга, в зависимости от условной компиляции
@@ -74,7 +75,7 @@ func main() {
 
 // Чтение из канала, конвертация в объекты Restaurants, маршалинг в json и заливка в Elastic
 func FromChannelToElastic(
-	ch chan InputType,
+	ch chan types.InputType,
 	bi esutil.BulkIndexer,
 	count *uint64) {
 
@@ -304,7 +305,7 @@ func readFromElastic(es *elasticsearch.Client) {
 	var result struct {
 		Hits struct {
 			Hits []struct {
-				Source Restaurants `json:"_source"`
+				Source types.Restaurants `json:"_source"`
 			} `json:"hits"`
 		} `json:"hits"`
 	}

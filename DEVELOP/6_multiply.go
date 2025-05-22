@@ -11,7 +11,7 @@ import (
 )
 
 // обработчик http-запроса
-func multiplyTable(w http.ResponseWriter, r *http.Request) {
+func handler(w http.ResponseWriter, r *http.Request) {
 	var arr = [10][10]int{}
 	for i := 1; i <= 10; i++ {
 		for j := 1; j <= 10; j++ {
@@ -25,8 +25,8 @@ func multiplyTable(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	http.HandleFunc("/", multiplyTable) // вызов функции-обработчика при обращении к корневой директории сервера localhost "/"
-	http.ListenAndServe(":8080", nil)   // запускаем сервер для приёма запросов на порту 8080.
+	http.HandleFunc("/", handler)     // вызов функции-обработчика при обращении к корневой директории сервера localhost "/"
+	http.ListenAndServe(":8080", nil) // запускаем сервер для приёма запросов на порту 8080.
 	// При этом программа перейдёт в режим ожидания, а нам надо будет любым способом, хоть с браузера, обратиться к порту 8080
 	// После запуска программы открываем браузер и вводим адрес http://localhost:8080/
 

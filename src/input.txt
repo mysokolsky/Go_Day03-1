@@ -10,17 +10,3 @@
 // Читаешь данные из CSV и конвертируешь в структурные объекты
 // Преобразуешь структурные объекты в JSON.
 // Используешь Bulk API для массовой загрузки объектов на сервер Elastic.
-
-package main
-
-type Location struct {
-	Latitude  float64 `json:"lat"`
-	Longitude float64 `json:"lon"`
-}
-
-type RestaurantsBASE struct {
-	Name     string   `json:"name"`
-	Address  string   `json:"address"`
-	Phone    string   `json:"phone"`
-	Location Location `json:"location"`
-}

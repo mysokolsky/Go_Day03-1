@@ -3,6 +3,7 @@
 package main
 
 import (
+	"Go_Day03-1/src/types"
 	"encoding/json"
 	"io"
 	"log"
@@ -10,18 +11,8 @@ import (
 	"strconv"
 )
 
-// тип структурного объекта с полем id из CSV файла
-type RestaurantsMANUAL struct {
-	ID uint64 `json:"id"`
-	RestaurantsBASE
-}
-
-type InputType = []string // тип данных для загрузки из CSV в канал-буфер
-
-type Restaurants = RestaurantsMANUAL
-
 // Чтение строк из CSV и заливка в канал-буфер
-func CSVLinesToChannel(file *os.File, ch chan InputType) {
+func CSVLinesToChannel(file *os.File, ch chan types.InputType) {
 
 	// bufReader := bufio.NewReader(file)
 	reader := initCSVReader(file) // инициализируем и настраиваем ридер для правильной разбивки строк на сегменты информации для конвертации в объекты Restaurants
@@ -55,7 +46,7 @@ func CSVLinesToChannel(file *os.File, ch chan InputType) {
 }
 
 // Конвертация строки в объект Restaurants при ручном парсинге
-func ConvertLineToRestaurantsOBJ(line InputType) (Restaurants, error) {
+func ConvertLineToRestaurantsOBJ(line types.InputType) (types.Restaurants, error) {
 
 	// Парсим ID
 	id, err := strconv.ParseUint(line[0], 10, 64)
@@ -75,16 +66,16 @@ func ConvertLineToRestaurantsOBJ(line InputType) (Restaurants, error) {
 	}
 
 	if err != nil {
-		return Restaurants{}, err
+		return types.Restaurants{}, err
 	}
 
-	return Restaurants{
+	return types.Restaurants{
 		ID: id,
-		RestaurantsBASE: RestaurantsBASE{
+		RestaurantsBASE: types.RestaurantsBASE{
 			Name:    line[1],
 			Address: line[2],
 			Phone:   line[3],
-			Location: Location{
+			Location: types.Location{
 				Latitude:  lat,
 				Longitude: lon,
 			}},
@@ -92,7 +83,7 @@ func ConvertLineToRestaurantsOBJ(line InputType) (Restaurants, error) {
 
 }
 
-func GetValue(r InputType) []byte {
+func GetValue(r types.InputType) []byte {
 
 	objRestaurant, _ := ConvertLineToRestaurantsOBJ(r)
 	val, _ := json.Marshal(objRestaurant)

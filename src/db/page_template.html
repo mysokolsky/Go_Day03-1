@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Места</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+<h5>Всего: {{ count }}</h5>
+<ul>
+    {{ range . }}
+        <li>
+        <div>{{ .Name }}</div>
+        <div>{{ .Address }}</div>
+        <div>{{ .Phone }}</div>
+        </li>
+    {{ end }}
+</ul>
+
+{{ if notfirst }}
+<a href="/?page={{ prev }}">Предыдущая</a>
+{{ end }}
+
+{{ if notlast }}
+<a href="/?page={{ next }}">Следующая</a>
+<a href="/?page={{ last }}">Последняя</a>
+{{ end }}
+
+</body>
+</html>
