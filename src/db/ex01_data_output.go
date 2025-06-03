@@ -25,6 +25,6 @@ type Store interface {
 	// или ошибку
 }
 
-func GetPlaces(limit int, offset int) ([]types.Place, int, error) {
+func (es *elasticsearch.Client) GetPlaces(limit int, offset int) ([]types.Place, int, error) {
 
 }
