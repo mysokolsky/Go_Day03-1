@@ -8,9 +8,9 @@
 </head>
 
 <body>
-<h5>Всего: {{ count }}</h5>
+<h5>Всего: {{ .Count }}</h5>
 <ul>
-    {{ range . }}
+    {{ range .Places }}
         <li>
         <div>{{ .Name }}</div>
         <div>{{ .Address }}</div>
@@ -19,13 +19,13 @@
     {{ end }}
 </ul>
 
-{{ if notfirst }}
-<a href="/?page={{ prev }}">Предыдущая</a>
+{{ if .Notfirst }}
+<a href="/?page={{ .Prev }}">Предыдущая</a>
 {{ end }}
 
-{{ if notlast }}
-<a href="/?page={{ next }}">Следующая</a>
-<a href="/?page={{ last }}">Последняя</a>
+{{ if .Notlast }}
+<a href="/?page={{ .Next }}">Следующая</a>
+<a href="/?page={{ .Last }}">Последняя</a>
 {{ end }}
 
 </body>
