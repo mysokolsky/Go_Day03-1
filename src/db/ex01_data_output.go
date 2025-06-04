@@ -25,6 +25,15 @@ type Store interface {
 	// или ошибку
 }
 
-func (es *elasticsearch.Client) GetPlaces(limit int, offset int) ([]types.Place, int, error) {
+
+
+func (es *ElasticClient) GetPlaces(limit int, offset int) ([]types.Place, int, error) {
+
+	Println("OK")
+
+	// тут надо написать много кода как я вытаскиваю данные из эластика
+	// это и есть основная функция, реализующая доступ к эластик через интерфейс Store
+
 
 }
+

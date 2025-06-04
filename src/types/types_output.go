@@ -17,3 +17,8 @@ type Page struct {
 	NotFirst bool
 	NotLast  bool
 }
+
+type ElasticClient struct {
+	Es *elasticsearch.Client
+	Index string
+}
