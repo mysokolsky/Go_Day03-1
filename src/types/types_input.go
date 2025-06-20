@@ -1,7 +1,5 @@
 package types
 
-
-
 type Location struct {
 	Latitude  float64 `json:"lat"`
 	Longitude float64 `json:"lon"`
@@ -13,4 +11,3 @@ type RestaurantsBASE struct {
 	Phone    string   `json:"phone"`
 	Location Location `json:"location"`
 }
-

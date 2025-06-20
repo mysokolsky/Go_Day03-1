@@ -7,8 +7,6 @@
 
 // Вернуть её в ответ на HTTP-запрос.
 
-
-
 // В контексте Elasticsearch, hits — это ключ в ответе на поисковый запрос,
 // который содержит найденные документы. Он является частью JSON-структуры,
 // которую возвращает Elasticsearch в ответ на запрос типа search.
@@ -79,7 +77,6 @@
 // Типично, это делается через json.NewDecoder(res.Body).Decode(&result)
 // и дальше обращение через мапы или структурные типы.
 
-
 // 📌 Что тебе нужно:
 // Выполнить search-запрос в Elasticsearch.
 
@@ -93,11 +90,12 @@
 
 // Вернуть []types.Place, общее количество и ошибку.
 
-
-
 package db
 
-import "Go_Day03-1/src/types"
+import (
+	"Go_Day03-1/src/types"
+	"fmt"
+)
 
 type Store interface {
 	// возвращает список записей, общее количество найденных записей и (или) ошибку
@@ -112,19 +110,15 @@ type Store interface {
 	// int - общее количество записей с маркером "places"
 	// или ошибку
 
-
 }
 
+func (es *types.ElasticClient) GetPlaces(limit int, offset int) ([]types.Place, int, error) {
 
+	fmt.Print("OK")
 
-func (es *ElasticClient) GetPlaces(limit int, offset int) ([]types.Place, int, error) {
-
-	Println("OK")
-
-	return []Place, 0, nil
+	return []types.Place{}, 0, nil
 
 	// тут надо написать много кода как я вытаскиваю данные из эластика
 	// это и есть основная функция, реализующая доступ к эластик через интерфейс Store
 
 }
-

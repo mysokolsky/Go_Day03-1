@@ -1,5 +1,8 @@
 package types
 
+import (
+	"github.com/elastic/go-elasticsearch/v8"
+)
 
 type Place struct {
 	Name    string `json:"name"`
@@ -19,6 +22,6 @@ type Page struct {
 }
 
 type ElasticClient struct {
-	Es *elasticsearch.Client
+	Es    *elasticsearch.Client
 	Index string
 }
