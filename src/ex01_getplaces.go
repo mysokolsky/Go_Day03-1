@@ -45,13 +45,39 @@ func handlePlaces(w http.ResponseWriter, r *http.Request) {
     tmpl.Execute(w, data)
 }
 
+
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "darwin": // macOS
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default: // Linux и WSL
+		cmd = exec.Command("xdg-open", url)
+	}
+
+
+
 func main() {
 
 
+    // var s db.Store = types.ElasticClient{Es: initElasticsearch(),index: "places"}
+
+    
 
 	http.HandleFunc("/", handlePlaces)
+
+	go openBrowser("http://localhost:8888") // Открываем браузер в отдельной горутине
+
 	log.Println("Сервер запущен на http://localhost:8888")
-	http.ListenAndServe(":8888", nil)
+
+	err := http.ListenAndServe(":8888", nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 
 }

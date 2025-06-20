@@ -33,7 +33,9 @@ func main() {
 	go openBrowser("http://localhost:8888") // Открываем браузер в отдельной горутине
 
 	log.Println("Сервер запущен на http://localhost:8888")
+	
 	err := http.ListenAndServe(":8888", nil)
+	
 	if err != nil {
 		log.Fatal(err)
 	}
