@@ -1,12 +1,14 @@
 package main
 
 import (
-	"Go_Day03-1/src/db"
-	"Go_Day03-1/src/types"
 	"log"
 	"net/http"
 	"os/exec"
 	"runtime"
+	"text/template"
+
+	"Go_Day03-1/src/db"
+	"Go_Day03-1/src/types"
 )
 
 // 1. Получать ?page=N через r.URL.Query().Get("page").
@@ -20,7 +22,7 @@ import (
 func handlePlaces(w http.ResponseWriter, r *http.Request) {
 	// Парсим параметры из URL
 	after := r.URL.Query().Get("after")
-	limit := 10
+	limit := 11
 
 	// Вызываем метод получения данных из интерфейса
 	places, nextAfterID, err := db.GetPlaces(limit, after)
