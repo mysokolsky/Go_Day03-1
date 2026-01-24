@@ -22,7 +22,7 @@ import (
 func handlePlaces(w http.ResponseWriter, r *http.Request) {
 	// Парсим параметры из URL
 	after := r.URL.Query().Get("after")
-	limit := 11
+	limit := 10
 
 	// Вызываем метод получения данных из интерфейса
 	places, nextAfterID, err := db.GetPlaces(limit, after)
