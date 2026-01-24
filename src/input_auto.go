@@ -9,8 +9,9 @@ import (
 	"log"
 	"os"
 
-	"Go_Day03-1/src/types"
 	"github.com/gocarina/gocsv"
+
+	"Go_Day03-1/src/types"
 )
 
 // функция читает данные из CSV файла и записывает в канал. Принимает на вход файл и канал типа RestaurantsCSV

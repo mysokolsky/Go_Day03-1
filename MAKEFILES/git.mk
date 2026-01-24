@@ -33,7 +33,7 @@ new-branch-develop:
 create-repo:
 	curl -u 'mysokolsky:$(GITHUB_TOKEN)' https://api.github.com/user/repos -d'{"name":"$(GITHUBPROJECTNAME)"}'
 
-# сначала уверждение гитлаб-репозитория как основного синхронизируемого, а потом подключение дополнительного для закачки репозитория на гитхаб
+# сначала у верждение гитлаб-репозитория как основного синхронизируемого, а потом подключение дополнительного для закачки репозитория на гитхаб
 add-remote-repo:
 # здесь собираются и удаляются все цепочки от команды git remote
 	git remote | while read remote; do git remote remove "$$remote"; done

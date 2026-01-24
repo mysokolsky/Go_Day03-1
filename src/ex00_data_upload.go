@@ -411,7 +411,7 @@ func readFromElastic(es *elasticsearch.Client) {
 // 		count += len(hitsPage)
 // 	}
 
-// 	// Очищаем scroll-контекст
+// Очищаем scroll-контекст
 // 	_, err = es.ClearScroll(
 // 		es.ClearScroll.WithScrollID(scrollID),
 // 	)
